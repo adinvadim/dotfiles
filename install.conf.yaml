@@ -15,6 +15,7 @@
     ~/.zshrc: .zshrc
     ~/bin/tat: bin/tat
     ~/.editorconfig: .editorconfig
+    ~/.config/kitty: kitty
 
 - create:
     - ~/.vim/undo-history
