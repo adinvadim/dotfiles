@@ -1,0 +1,13 @@
+{
+  "coc.preferences.formatOnSaveFiletypes": [
+    "css",
+    "html",
+    "vue",
+    "javascript",
+    "javascript.jsx",
+    "json",
+    "typescript",
+    "typescript.tsx"
+  ],
+  "tsserver.formatOnType": false
+}

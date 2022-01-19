@@ -1,0 +1,27 @@
+- defaults:
+    link:
+      relink: true
+
+- clean: ['~']
+
+- create:
+    - ~/.config
+    - ~/bin
+
+- link:
+    ~/.tmux.conf: .tmux.conf
+    ~/.gitconfig: .gitconfig
+    ~/.nuxtrc: .nuxtrc
+    ~/.zshrc: .zshrc
+    ~/bin/tat: bin/tat
+    ~/.editorconfig: .editorconfig
+
+- create:
+    - ~/.vim/undo-history
+
+- shell:
+  - [git submodule update --init --recursive, Installing submodules]
+  - sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+  - [sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)", Installing oh-my-zsh]
+  - mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
+  - git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm

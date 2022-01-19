@@ -1,0 +1,21 @@
+
+[delta]
+  features = side-by-side line-numbers decorations
+  whitespace-error-style = 22 reverse
+
+[alias]
+	commend = commit --amend --no-edit
+	it = !git init && git commit -m “root” --allow-empty
+	st = status
+	ci = commit
+	br = branch
+	co = checkout
+	unstage = reset HEAD --
+
+[user]
+	email = adin.vadim@gmail.com
+	name = adinvadim
+
+[delta]
+  features = side-by-side line-numbers decorations
+  whitespace-error-style = 22 reverse
