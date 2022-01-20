@@ -1,11 +1,11 @@
-"         
+"
 " ██╗███╗   ██╗██╗████████╗██╗   ██╗██╗███╗   ███╗
 " ██║████╗  ██║██║╚══██╔══╝██║   ██║██║████╗ ████║
 " ██║██╔██╗ ██║██║   ██║   ██║   ██║██║██╔████╔██║
 " ██║██║╚██╗██║██║   ██║   ╚██╗ ██╔╝██║██║╚██╔╝██║
 " ██║██║ ╚████║██║   ██║██╗ ╚████╔╝ ██║██║ ╚═╝ ██║
 " ╚═╝╚═╝  ╚═══╝╚═╝   ╚═╝╚═╝  ╚═══╝  ╚═╝╚═╝     ╚═╝
-" 
+"
 "	@adinvadim
 "
 
@@ -52,9 +52,9 @@ else
 endif
 
 " folding
-" set foldmethod=syntax "syntax highlighting items specify folds  
-" set foldcolumn=1 "defines 1 col at window left, to indicate folding  
-" let javaScript_fold=1 "activate folding by JS syntax  
+" set foldmethod=syntax "syntax highlighting items specify folds
+" set foldcolumn=1 "defines 1 col at window left, to indicate folding
+" let javaScript_fold=1 "activate folding by JS syntax
 " set foldlevelstart=99 "start file with all folds opened
 
 set foldlevel=20
@@ -89,11 +89,13 @@ Plug 'karb94/neoscroll.nvim'
 Plug 'akinsho/nvim-bufferline.lua'
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'windwp/nvim-autopairs'
+Plug 'Lokaltog/vim-easymotion'
 
 " tpope plugins
 Plug 'tpope/vim-surround'
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-sleuth'
+Plug 'tpope/vim-repeat'
 
 " File Management
 Plug 'nvim-lua/popup.nvim'
@@ -130,7 +132,7 @@ let mapleader = ","
 lua << EOF
 require('telescope').setup {
   defaults = {
-    file_ignore_patterns = { "yarn.lock", "package-lock.json", "node_modules", "dist", "dump", ".git", ".DS_Store" }
+    file_ignore_patterns = { "yarn.lock", "package-lock", "node_modules", "dist", "dump", ".git", ".DS_Store", "**/*.log" ,"*.log" }
   },
   extensions = {
     fzf = {
@@ -156,6 +158,7 @@ require('telescope').setup {
 }
 require('telescope').load_extension('fzf')
 require("telescope").load_extension "file_browser"
+require("telescope").load_extension('harpoon')
 EOF
 nnoremap <leader>ps :lua require('telescope.builtin').grep_string( { search = vim.fn.input("Grep for > ") } )<cr>
 nnoremap <leader>ff :lua require'telescope.builtin'.find_files{ hidden = true }<cr>
@@ -165,7 +168,8 @@ nnoremap <leader>fs <cmd>lua require 'telescope'.extensions.file_browser.file_br
 nnoremap <Leader>fc :lua require'telescope.builtin'.git_status{}<cr>
 nnoremap <Leader>cb :lua require'telescope.builtin'.git_branches{}<cr>
 nnoremap <leader>fr :lua require'telescope.builtin'.resume{}<CR>
-nnoremap <leader>fg <cmd>lua require('telescope.builtin').live_grep( { file_ignore_patterns = { '**/*.spec.js' } } )<cr>
+nnoremap <leader>fg <cmd>Telescope live_grep<cr>
+" nnoremap <leader>fg <cmd>lua require('telescope.builtin').live_grep( { file_ignore_patterns = { '**/*.spec.js' } } )<cr>
 " nnoremap <leader>fgi <cmd>lua require('telescope.builtin').live_grep( { file_ignore_patterns = { vim.fn.input("Ignore pattern > ") } } )<cr>
 nnoremap <leader>fgd :lua require'telescope.builtin'.live_grep{ search_dirs = { 'slices/admin' } }
 
@@ -183,13 +187,13 @@ nnoremap <silent> <Leader>ct :DashboardChangeColorscheme<CR>
 nnoremap <silent> <Leader>fm :DashboardJumpMark<CR>
 nnoremap <silent> <Leader>nf :DashboardNewFile<CR>
 let g:dashboard_custom_shortcut={
-\ 'last_session'       : 'SPC s l',
-\ 'find_history'       : 'SPC f h',
-\ 'find_file'          : 'SPC f f',
-\ 'new_file'           : 'SPC n f',
-\ 'change_colorscheme' : 'SPC c t',
-\ 'find_word'          : 'SPC f g',
-\ 'book_marks'         : 'SPC f m',
+\ 'last_session'       : ', s l',
+\ 'find_history'       : ', f h',
+\ 'find_file'          : ', f f',
+\ 'new_file'           : ', n f',
+\ 'change_colorscheme' : ', c t',
+\ 'find_word'          : ', f g',
+\ 'book_marks'         : ', f m',
 \ }
 let s:header = [
     \ '███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗',
@@ -445,6 +449,9 @@ nnoremap <silent> gb :BufferLinePick<CR>
     nnoremap <leader>bp :<C-u>bp<CR>
     " Delete buffer without closing window
     nnoremap <silent><leader>bd :<C-u>bn<bar>sp<bar>bp<bar>bd<CR>
+    nmap <leader>. <c-^>
+
+    vnoremap <C-r> "hy:%s/<C-r>h//gc<left><left><left>
 
 " }}}
 
@@ -515,4 +522,39 @@ EOF
 lua << EOF
 require('nvim-autopairs').setup()
 EOF
+" }}}
+
+" tpope/vim-commentary {{{
+nnoremap <leader>/ :Commentary<CR>
+vnoremap <leader>/ :Commentary<CR>
+"}}}
+
+
+" easymotion/vim-easymotion {{{
+" <Leader>f{char} to move to {char}
+map  <leader>f <Plug>(easymotion-bd-f)
+nmap <leader>f <Plug>(easymotion-overwin-f)
+
+" s{char}{char} to move to {char}{char}
+nmap s <Plug>(easymotion-overwin-f2)
+
+" Move to line
+map <leader>L <Plug>(easymotion-bd-jk)
+nmap <leader>L <Plug>(easymotion-overwin-line)
+
+
+" Move to word
+map  <leader>w <Plug>(easymotion-bd-w)
+nmap <leader>w <Plug>(easymotion-overwin-w)
+" }}}
+
+
+" ThePrimeagen/harpoon {{{
+nnoremap <leader>a :lua require("harpoon.mark").add_file()<CR>
+nnoremap <leader>ls :lua require("harpoon.ui").toggle_quick_menu()<CR>
+nnoremap <leader>1 :lua require("harpoon.ui").nav_file(1)<CR>
+nnoremap <leader>2 :lua require("harpoon.ui").nav_file(2)<CR>
+nnoremap <leader>3 :lua require("harpoon.ui").nav_file(3)<CR>
+nnoremap <leader>4 :lua require("harpoon.ui").nav_file(4)<CR>
+
 " }}}
