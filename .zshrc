@@ -8,7 +8,7 @@ export ZSH="/Users/adinvadim/.oh-my-zsh"
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="robbyrussell"
+ZSH_THEME=""
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -72,6 +72,9 @@ plugins=(git)
 
 source $ZSH/oh-my-zsh.sh
 
+autoload -U promptinit; promptinit
+prompt pure
+
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
@@ -101,3 +104,8 @@ source $ZSH/oh-my-zsh.sh
 
 code () { VSCODE_CWD="$PWD" open -n -b "com.microsoft.VSCode" --args $* ;}
 
+# The next line updates PATH for Yandex Cloud CLI.
+if [ -f '/Users/adinvadim/yandex-cloud/path.bash.inc' ]; then source '/Users/adinvadim/yandex-cloud/path.bash.inc'; fi
+
+# The next line enables shell command completion for yc.
+if [ -f '/Users/adinvadim/yandex-cloud/completion.zsh.inc' ]; then source '/Users/adinvadim/yandex-cloud/completion.zsh.inc'; fi

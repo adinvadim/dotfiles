@@ -9,5 +9,15 @@
     "typescript",
     "typescript.tsx"
   ],
-  "tsserver.formatOnType": false
+  "tsserver.formatOnType": false,
+  "languageserver": {
+    "terraform": {
+      "command": "terraform-ls",
+      "args": ["serve"],
+      "filetypes": ["terraform", "tf"],
+      "initializationOptions": {},
+      "settings": {}
+    }
+  },
+  "tailwindCSS.headwind.runOnSave": false
 }

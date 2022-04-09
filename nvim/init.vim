@@ -89,7 +89,9 @@ Plug 'karb94/neoscroll.nvim'
 Plug 'akinsho/nvim-bufferline.lua'
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'windwp/nvim-autopairs'
-Plug 'Lokaltog/vim-easymotion'
+Plug 'vim-test/vim-test'
+Plug 'preservim/vimux'
+
 
 " tpope plugins
 Plug 'tpope/vim-surround'
@@ -101,6 +103,7 @@ Plug 'tpope/vim-repeat'
 Plug 'nvim-lua/popup.nvim'
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
+Plug 'LinArcX/telescope-env.nvim'
 Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'nvim-telescope/telescope-file-browser.nvim'
 Plug 'sudormrfbin/cheatsheet.nvim'
@@ -115,8 +118,18 @@ Plug 'kyazdani42/nvim-web-devicons'
 Plug 'dracula/vim', { 'as': 'dracula' }
 
 
+" Syntax
+Plug 'posva/vim-vue'
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 Plug 'JoosepAlviste/nvim-ts-context-commentstring'
+Plug 'delphinus/vim-firestore'
+Plug 'hashivim/vim-terraform'
+Plug 'yaegassy/coc-tailwindcss', {'do': 'yarn install --frozen-lockfile', 'branch': 'feat/support-v3-and-use-server-pkg'}
+Plug 'yaegassy/coc-volar', {'do': 'yarn install --frozen-lockfile'}
+Plug 'neoclide/coc-tsserver', {'do': 'yarn install --frozen-lockfile'}
+Plug 'neoclide/coc-vetur', {'do': 'yarn install --frozen-lockfile'}
+Plug 'neoclide/coc-html', {'do': 'yarn install --frozen-lockfile'}
+Plug 'neoclide/coc-prettier', {'do': 'yarn install --frozen-lockfile'}
 
 Plug 'hoob3rt/lualine.nvim'
 
@@ -159,6 +172,7 @@ require('telescope').setup {
 require('telescope').load_extension('fzf')
 require("telescope").load_extension "file_browser"
 require("telescope").load_extension('harpoon')
+require('telescope').load_extension('env')
 EOF
 nnoremap <leader>ps :lua require('telescope.builtin').grep_string( { search = vim.fn.input("Grep for > ") } )<cr>
 nnoremap <leader>ff :lua require'telescope.builtin'.find_files{ hidden = true }<cr>
@@ -453,6 +467,11 @@ nnoremap <silent> gb :BufferLinePick<CR>
 
     vnoremap <C-r> "hy:%s/<C-r>h//gc<left><left><left>
 
+    imap <C-l> <Right>
+    imap <C-h> <Left>
+    imap <C-j> <Down>
+    imap <C-k> <Up>
+
 " }}}
 
 " kyazdani42/nvim-tree.lua {{{
@@ -530,31 +549,32 @@ vnoremap <leader>/ :Commentary<CR>
 "}}}
 
 
-" easymotion/vim-easymotion {{{
-" <Leader>f{char} to move to {char}
-map  <leader>f <Plug>(easymotion-bd-f)
-nmap <leader>f <Plug>(easymotion-overwin-f)
+" 'vim-test/vim-test' {{{
+let test#strategy = "vimux"
+let test#neovim#term_position = "vertical"
+let g:test#javascript#runner = 'jest'
+" https://github.com/vim-test/vim-test/issues/272
+let g:root_markers = ['package.json', '.git/']
+function! s:RunVimTest(cmd)
+    " I guess this part could be replaced by projectionist#project_root
+    for marker in g:root_markers
+        let marker_file = findfile(marker, expand('%:p:h') . ';')
+        if strlen(marker_file) > 0
+            let g:test#project_root = fnamemodify(marker_file, ":p:h")
+            break
+        endif
+        let marker_dir = finddir(marker, expand('%:p:h') . ';')
+        if strlen(marker_dir) > 0
+            let g:test#project_root = fnamemodify(marker_dir, ":p:h")
+            break
+        endif
+    endfor
 
-" s{char}{char} to move to {char}{char}
-nmap s <Plug>(easymotion-overwin-f2)
-
-" Move to line
-map <leader>L <Plug>(easymotion-bd-jk)
-nmap <leader>L <Plug>(easymotion-overwin-line)
-
-
-" Move to word
-map  <leader>w <Plug>(easymotion-bd-w)
-nmap <leader>w <Plug>(easymotion-overwin-w)
-" }}}
-
-
-" ThePrimeagen/harpoon {{{
-nnoremap <leader>a :lua require("harpoon.mark").add_file()<CR>
-nnoremap <leader>ls :lua require("harpoon.ui").toggle_quick_menu()<CR>
-nnoremap <leader>1 :lua require("harpoon.ui").nav_file(1)<CR>
-nnoremap <leader>2 :lua require("harpoon.ui").nav_file(2)<CR>
-nnoremap <leader>3 :lua require("harpoon.ui").nav_file(3)<CR>
-nnoremap <leader>4 :lua require("harpoon.ui").nav_file(4)<CR>
-
+    execute a:cmd
+endfunction
+nnoremap <leader>tt :call <SID>RunVimTest('TestNearest')<cr>
+nnoremap <leader>tl :call <SID>RunVimTest('TestLast')<cr>
+nnoremap <leader>tf :call <SID>RunVimTest('TestFile')<cr>
+nnoremap <leader>ts :call <SID>RunVimTest('TestSuite')<cr>
+nnoremap <leader>tv :call <SID>RunVimTest('TestVisit')<cr>
 " }}}

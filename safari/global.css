@@ -1,0 +1,9 @@
+/** Hide all VK instead VK Music */
+
+#page_layout #side_bar {
+  display: none;
+}
+
+section#fastchat-reforged {
+  display: none;
+}
