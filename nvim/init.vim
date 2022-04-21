@@ -115,7 +115,11 @@ Plug 'hoob3rt/lualine.nvim'
 Plug 'kyazdani42/nvim-web-devicons'
 
 " Themes
+Plug 'arcticicestudio/nord-vim'
+Plug 'bluz71/vim-nightfly-guicolors'
 Plug 'dracula/vim', { 'as': 'dracula' }
+Plug '4513ECHO/vim-colors-hatsunemiku'
+Plug 'projekt0n/github-nvim-theme'
 
 
 " Syntax
@@ -228,6 +232,9 @@ let g:dashboard_custom_footer = s:footer
 " Use tab for trigger completion with characters ahead and navigate.
 " NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
 " other plugin before putting this into your config.
+
+let g:coc_disable_transparent_cursor = 1
+
 inoremap <silent><expr> <TAB>
       \ pumvisible() ? "\<C-n>" :
       \ <SID>check_back_space() ? "\<TAB>" :
@@ -366,13 +373,24 @@ nnoremap <silent><nowait> <space>p  :<C-u>CocListResume<CR>
 " }}}
 "
 "
+" " Auto file type {{{
+
+au BufRead,BufNewFile *.conf set filetype=dosini
+
+" File type for terraform tpl files
+au BufRead,BufNewFile *.yaml.tpl set filetype=yaml
+au BufRead,BufNewFile *.yml.tpl set filetype=yaml
+au BufRead,BufNewFile *.conf.tpl set filetype=dosini
+au BufRead,BufNewFile *.sh.tpl set filetype=bash
+
+" }}}
 " " Colors {{{
 if (has("termguicolors"))
   set termguicolors " enable true colors support
 endif
 let g:dracula_colorterm = 0
 let g:dracula_italic = 1
-colorscheme dracula
+colorscheme github_dark
 " set background=dark " light or dark
 " colorscheme onebuddy
 "
@@ -412,18 +430,6 @@ lua << EOF
 vim.api.nvim_exec([[let $KITTY_WINDOW_ID=0]], true)
 require("bufferline").setup{
   highlights = {
-    fill = {
-      guibg = "#282828"
-    },
-    separator_selected = {
-      guifg = "#282828"
-    },
-    separator_visible = {
-      guifg = "#282828"
-    },
-    separator = {
-      guifg = "#282828"
-    }
   },
   options = {
     modified_icon = "●",
@@ -525,7 +531,7 @@ lua << EOF
 require('plenary.reload').reload_module('lualine', true)
 require('lualine').setup({
   options = {
-    theme = 'dracula',
+    theme = 'auto',
     disabled_types = { 'NvimTree' }
   },
   sections = {

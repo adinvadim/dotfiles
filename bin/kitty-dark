@@ -1,0 +1,100 @@
+#!/bin/sh
+RED="$(printf '\033[31m')"  GREEN="$(printf '\033[32m')"  ORANGE="$(printf '\033[33m')"  BLUE="$(printf '\033[34m')"
+MAGENTA="$(printf '\033[35m')"  CYAN="$(printf '\033[36m')"  WHITE="$(printf '\033[37m')" BLACK="$(printf '\033[30m')"
+REDBG="$(printf '\033[41m')"  GREENBG="$(printf '\033[42m')"  ORANGEBG="$(printf '\033[43m')"  BLUEBG="$(printf '\033[44m')"
+MAGENTABG="$(printf '\033[45m')"  CYANBG="$(printf '\033[46m')"  WHITEBG="$(printf '\033[47m')" BLACKBG="$(printf '\033[40m')"
+DEFAULT_FG="$(printf '\033[39m')"  DEFAULT_BG="$(printf '\033[49m')"
+
+KITTY_DIR="$HOME/.config/kitty"
+THEME_DIR="$KITTY_DIR/themes"
+
+help="\t$CYAN$(basename "$0") $ORANGE theme-name [URL]$WHITE\n
+\n
+example of storing theme\n
+\t$CYAN"$0" $ORANGE dark https://some-url $WHITE\n
+\n
+example of appling theme\n
+\t$CYAN"$0" $ORANGE dark\n
+"
+
+mkdir -p $THEME_DIR
+
+if [ $1 = "list" ]; then
+  themes=($(ls $THEME_DIR))
+  for theme in "${themes[@]}"; do
+    echo $ORANGE"    ${theme%.*}"
+  done
+  exit;
+fi
+
+# see https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      HELP=1
+      shift # past argument
+      ;;
+    -a|--apply)
+      APPLY_THEME=1
+      shift # past argument
+      ;;
+    -*|--*)
+      echo $RED"    Error: Unknown option $1"
+      exit 1
+      ;;
+    *)
+      THEME_NAME+=("$1") # save positional arg
+      THEME_URL+=("$2") # save positional arg
+      shift # past argument
+      ;;
+  esac
+done
+
+if [[ -n $HELP ]]; then
+  echo  $help;
+  exit;
+fi
+
+
+set -- "${THEME_NAME[@]}" # restore positional parameters
+set -- "${THEME_URL[@]}" # restore positional parameters
+
+
+THEME_FILE="$THEME_DIR/$THEME_NAME.conf"
+
+reload_settings () {
+  echo $MAGENTA"    Reloading settings..."
+  kitty @ set-colors --all $KITTY_DIR/colors.conf > /dev/null
+  { echo $GREEN"    Applied successfully."; echo; }
+  return
+}
+reset_color() {
+  tput sgr0   # reset attributes
+  tput op     # reset color
+  return
+}
+
+apply_theme () {
+  if ! [[ -s $THEME_FILE ]]; then
+    if [[ -f $THEME_FILE ]]; then
+      echo $RED"   Error: Theme $THEME_NAME is empty"
+      exit;
+    else
+      echo $RED"   Error: Theme $THEME_NAME does not exist"
+      exit;
+    fi
+  fi
+  echo $MAGENTA"    Theme ${ORANGE}$THEME_NAME ${MAGENTA}found"
+  cat $THEME_FILE > $KITTY_DIR/colors.conf
+  { reload_settings; reset_color; exit; }
+}
+
+# store theme
+if [[ -n $THEME_URL ]]; then
+  wget -q -O $THEME_FILE $THEME_URL
+  echo $GREEN"    Theme store succesed."
+  exit
+else
+  apply_theme
+  exit
+fi

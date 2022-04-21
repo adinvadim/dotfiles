@@ -15,6 +15,7 @@
     ~/.zshrc: .zshrc
     ~/bin/tat: bin/tat
     ~/bin/kill-by-port: bin/kill-by-port
+    ~/bin/kitty-dark: bin/kitty-dark
     ~/.editorconfig: .editorconfig
     ~/.config/kitty: kitty
     ~/safari-global.css: safari/global.css
