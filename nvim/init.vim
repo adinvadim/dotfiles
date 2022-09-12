@@ -78,7 +78,7 @@ set lazyredraw
 call plug#begin('~/.local/share/nvim/site/autoload')
 
 " Dashboard
-Plug 'glepnir/dashboard-nvim'
+Plug 'glepnir/dashboard-nvim', { 'commit': 'a36b3232c98616149784f2ca2654e77caea7a522' }
 
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'editorconfig/editorconfig-vim'
@@ -128,12 +128,17 @@ Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 Plug 'JoosepAlviste/nvim-ts-context-commentstring'
 Plug 'delphinus/vim-firestore'
 Plug 'hashivim/vim-terraform'
-Plug 'yaegassy/coc-tailwindcss', {'do': 'yarn install --frozen-lockfile', 'branch': 'feat/support-v3-and-use-server-pkg'}
+Plug 'yaegassy/coc-tailwindcss3', {'do': 'yarn install --frozen-lockfile'}
 Plug 'yaegassy/coc-volar', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-tsserver', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-vetur', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-html', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-prettier', {'do': 'yarn install --frozen-lockfile'}
+Plug 'neoclide/coc-snippets', {'do': 'yarn install --frozen-lockfile'}
+Plug 'github/copilot.vim'
+Plug 'gaoDean/autolist.nvim'
+Plug 'axelvc/template-string.nvim'
+
 
 Plug 'hoob3rt/lualine.nvim'
 
@@ -235,16 +240,6 @@ let g:dashboard_custom_footer = s:footer
 
 let g:coc_disable_transparent_cursor = 1
 
-inoremap <silent><expr> <TAB>
-      \ pumvisible() ? "\<C-n>" :
-      \ <SID>check_back_space() ? "\<TAB>" :
-      \ coc#refresh()
-inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
-
-function! s:check_back_space() abort
-  let col = col('.') - 1
-  return !col || getline('.')[col - 1]  =~# '\s'
-endfunction
 
 " Use <c-space> to trigger completion.
 if has('nvim')
@@ -253,10 +248,19 @@ else
   inoremap <silent><expr> <c-@> coc#refresh()
 endif
 
-" Make <CR> auto-select the first completion item and notify coc.nvim to
-" format on enter, <cr> could be remapped by other vim plugin
-inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
-                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+inoremap <silent><expr> <TAB>
+  \ coc#pum#visible() ? coc#_select_confirm() :
+  \ coc#expandableOrJumpable() ?
+  \ "\<C-r>=coc#rpc#request('doKeymap', ['snippets-expand-jump',''])\<CR>" :
+  \ CheckBackSpace() ? "\<TAB>" :
+  \ coc#refresh()
+
+  function! CheckBackSpace() abort
+    let col = col('.') - 1
+    return !col || getline('.')[col - 1]  =~# '\s'
+  endfunction
+
+  let g:coc_snippet_next = '<tab>'
 
 " Use `[g` and `]g` to navigate diagnostics
 " Use `:CocDiagnostics` to get all diagnostics of current buffer in location list.
@@ -481,23 +485,27 @@ nnoremap <silent> gb :BufferLinePick<CR>
 " }}}
 
 " kyazdani42/nvim-tree.lua {{{
-let g:nvim_tree_ignore = [ '.git', 'node_modules', '.cache' ]
-let g:nvim_tree_gitignore = 1
-" let g:nvim_tree_auto_close = 1
-" let g:nvim_tree_auto_ignore_ft = [ 'startify', 'dashboard' ]
-let g:nvim_tree_quit_on_open = 1
-let g:nvim_tree_indent_markers = 1
-let g:nvim_tree_git_hl = 1
-let g:nvim_tree_highlight_opened_files = 1
-let g:nvim_tree_group_empty = 1
-" let g:nvim_tree_lsp_diagnostics = 1
 
 lua << EOF
-require'nvim-tree'.setup {
-  auto_close = true,
+require('nvim-tree').setup({
   -- lsp_diagnostics = true,
-  ignore_ft_on_setup  = { 'startify', 'dashboard' },
-}
+   sort_by = "case_sensitive",
+  view = {
+    adaptive_size = true,
+    mappings = {
+      list = {
+        { key = "u", action = "dir_up" },
+      },
+    },
+  },
+  renderer = {
+    group_empty = true,
+  },
+  filters = {
+    dotfiles = true,
+  },
+
+})
 EOF
 
 nnoremap <C-n> :NvimTreeToggle<CR>
@@ -558,7 +566,7 @@ vnoremap <leader>/ :Commentary<CR>
 " 'vim-test/vim-test' {{{
 let test#strategy = "vimux"
 let test#neovim#term_position = "vertical"
-let g:test#javascript#runner = 'jest'
+let g:test#javascript#runner = 'vitest'
 " https://github.com/vim-test/vim-test/issues/272
 let g:root_markers = ['package.json', '.git/']
 function! s:RunVimTest(cmd)
@@ -583,4 +591,11 @@ nnoremap <leader>tl :call <SID>RunVimTest('TestLast')<cr>
 nnoremap <leader>tf :call <SID>RunVimTest('TestFile')<cr>
 nnoremap <leader>ts :call <SID>RunVimTest('TestSuite')<cr>
 nnoremap <leader>tv :call <SID>RunVimTest('TestVisit')<cr>
+" }}}
+"
+
+" Plug 'github/copilot.vim' {{{
+imap <silent><script><expr> <C-B> copilot#Accept("\<CR>")
+let g:copilot_no_tab_map = v:true
+
 " }}}

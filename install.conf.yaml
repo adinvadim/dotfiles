@@ -13,6 +13,7 @@
     ~/.gitconfig: .gitconfig
     ~/.nuxtrc: .nuxtrc
     ~/.zshrc: .zshrc
+    ~/.config/nvim: nvim
     ~/bin/tat: bin/tat
     ~/bin/kill-by-port: bin/kill-by-port
     ~/bin/kitty-dark: bin/kitty-dark
