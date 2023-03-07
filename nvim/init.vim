@@ -117,7 +117,7 @@ Plug 'kyazdani42/nvim-web-devicons'
 " Themes
 Plug 'arcticicestudio/nord-vim'
 Plug 'bluz71/vim-nightfly-guicolors'
-Plug 'dracula/vim', { 'as': 'dracula' }
+"Plug 'dracula/vim', { 'as': 'dracula' }
 Plug '4513ECHO/vim-colors-hatsunemiku'
 Plug 'projekt0n/github-nvim-theme'
 
@@ -135,6 +135,7 @@ Plug 'neoclide/coc-vetur', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-html', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-prettier', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-snippets', {'do': 'yarn install --frozen-lockfile'}
+Plug 'neoclide/coc-json' , {'do': 'yarn install --frozen-lockfile'}
 Plug 'github/copilot.vim'
 Plug 'gaoDean/autolist.nvim'
 Plug 'axelvc/template-string.nvim'
@@ -157,7 +158,9 @@ require('telescope').setup {
     file_ignore_patterns = { "yarn.lock", "package-lock", "node_modules", "dist", "dump", ".git", ".DS_Store", "**/*.log" ,"*.log" }
   },
   extensions = {
+
     fzf = {
+      theme = "dropdown",
       fuzzy = true,
       override_generic_sorter = false,
       override_file_sorter = true,
@@ -183,18 +186,18 @@ require("telescope").load_extension "file_browser"
 require("telescope").load_extension('harpoon')
 require('telescope').load_extension('env')
 EOF
-nnoremap <leader>ps :lua require('telescope.builtin').grep_string( { search = vim.fn.input("Grep for > ") } )<cr>
-nnoremap <leader>ff :lua require'telescope.builtin'.find_files{ hidden = true }<cr>
+"nnoremap <leader>fg :lua require('telescope.builtin').grep_string( { search = vim.fn.input("Grep for > ") } )<cr>
+nnoremap <leader>ff :lua require'telescope.builtin'.find_files{}<cr>
 nnoremap <leader>fb <cmd>Telescope buffers<cr>
 " nnoremap <Leader>fs :lua require'telescope.builtin'.file_browser{ cwd = vim.fn.expand('%:p:h') }<cr>
 nnoremap <leader>fs <cmd>lua require 'telescope'.extensions.file_browser.file_browser( { path = vim.fn.expand('%:p:h') } )<CR>
 nnoremap <Leader>fc :lua require'telescope.builtin'.git_status{}<cr>
 nnoremap <Leader>cb :lua require'telescope.builtin'.git_branches{}<cr>
 nnoremap <leader>fr :lua require'telescope.builtin'.resume{}<CR>
-nnoremap <leader>fg <cmd>Telescope live_grep<cr>
+nnoremap <leader>fg <cmd>:lua require'telescope.builtin'.live_grep{}<cr>
 " nnoremap <leader>fg <cmd>lua require('telescope.builtin').live_grep( { file_ignore_patterns = { '**/*.spec.js' } } )<cr>
 " nnoremap <leader>fgi <cmd>lua require('telescope.builtin').live_grep( { file_ignore_patterns = { vim.fn.input("Ignore pattern > ") } } )<cr>
-nnoremap <leader>fgd :lua require'telescope.builtin'.live_grep{ search_dirs = { 'slices/admin' } }
+"nnoremap <leader>fgd :lua require'telescope.builtin'.live_grep{ search_dirs = { 'slices/admin' } }
 
 nnoremap <leader>cheat :Cheatsheet<cr>
 " nnoremap <leader>fh <cmd>Telescope help_tags<cr>
@@ -208,7 +211,7 @@ nmap <Leader>sl :<C-u>SessionLoad<CR>
 nnoremap <silent> <Leader>fh :DashboardFindHistory<CR>
 nnoremap <silent> <Leader>ct :DashboardChangeColorscheme<CR>
 nnoremap <silent> <Leader>fm :DashboardJumpMark<CR>
-nnoremap <silent> <Leader>nf :DashboardNewFile<CR>
+"nnoremap <silent> <Leader>nf :DashboardNewFile<CR>
 let g:dashboard_custom_shortcut={
 \ 'last_session'       : ', s l',
 \ 'find_history'       : ', f h',
@@ -338,6 +341,8 @@ if has('nvim-0.4.0') || has('patch-8.2.0750')
   vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
 endif
 
+
+
 " Use CTRL-S for selections ranges.
 " Requires 'textDocument/selectionRange' support of language server.
 nmap <silent> <C-s> <Plug>(coc-range-select)
@@ -365,7 +370,7 @@ nnoremap <silent><nowait> <space>e  :<C-u>CocList extensions<cr>
 " Show commands.
 nnoremap <silent><nowait> <space>c  :<C-u>CocList commands<cr>
 " Find symbol of current document.
-nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
+nnoremap <silent><nowait> <leader>o  :<C-u>CocList outline<cr>
 " Search workspace symbols.
 nnoremap <silent><nowait> <space>s  :<C-u>CocList -I symbols<cr>
 " Do default action for next item.
@@ -375,9 +380,20 @@ nnoremap <silent><nowait> <space>k  :<C-u>CocPrev<CR>
 " Resume latest coc list.
 nnoremap <silent><nowait> <space>p  :<C-u>CocListResume<CR>
 " }}}
-"
-"
-" " Auto file type {{{
+
+" Move line {{{
+" see https://vim.fandom.com/wiki/Moving_lines_up_or_down
+
+nnoremap <A-j> :m .+1<CR>==
+nnoremap <A-k> :m .-2<CR>==
+inoremap <A-j> <Esc>:m .+1<CR>==gi
+inoremap <A-k> <Esc>:m .-2<CR>==gi
+vnoremap <A-j> :m '>+1<CR>gv=gv
+vnoremap <A-k> :m '<-2<CR>gv=gv
+" }}}
+
+
+" Auto file type {{{
 
 au BufRead,BufNewFile *.conf set filetype=dosini
 
@@ -388,14 +404,26 @@ au BufRead,BufNewFile *.conf.tpl set filetype=dosini
 au BufRead,BufNewFile *.sh.tpl set filetype=bash
 
 " }}}
-" " Colors {{{
+
+" Colors {{{
 if (has("termguicolors"))
   set termguicolors " enable true colors support
 endif
-let g:dracula_colorterm = 0
-let g:dracula_italic = 1
-colorscheme github_dark
-" set background=dark " light or dark
+
+"let g:dracula_colorterm = 0
+"let g:dracula_italic = 1
+
+
+set textwidth=80
+set colorcolumn=+1
+set colorcolumn=80
+
+"colorscheme github_dark_default
+"set background=dark " light or dark
+"highlight ColorColumn guibg=#090c10
+
+colorscheme github_light_default
+set background=light " light or dark
 " colorscheme onebuddy
 "
 
@@ -409,14 +437,10 @@ lua << EOF
 --})
 EOF
 
-highlight Cursor guifg=#f00 guibg=#657b83
+"highlight Cursor guifg=#f00 guibg=#657b83
 highlight Comment cterm=italic gui=italic
 
 " Make it obvious where 80 characters is
-set textwidth=80
-set colorcolumn=+1
-set colorcolumn=80
-highlight ColorColumn guibg=#181818
 " }}}
 
 
@@ -489,7 +513,7 @@ nnoremap <silent> gb :BufferLinePick<CR>
 lua << EOF
 require('nvim-tree').setup({
   -- lsp_diagnostics = true,
-   sort_by = "case_sensitive",
+  sort_by = "case_sensitive",
   view = {
     adaptive_size = true,
     mappings = {
@@ -510,14 +534,15 @@ EOF
 
 nnoremap <C-n> :NvimTreeToggle<CR>
 nnoremap <leader>r :NvimTreeRefresh<CR>
-nnoremap <leader>n :NvimTreeFindFile<CR>
+nnoremap <leader>n <cmd>:NvimTreeFindFile<CR>
 "}}}
 "
 "
 "" nvim-treesitter {{{
 lua <<EOF
 require'nvim-treesitter.configs'.setup {
-  ensure_installed = { 'html', 'javascript', 'typescript', 'tsx', 'css', 'json' },
+  ensure_installed = { 'html', 'javascript', 'typescript', 'tsx', 'css', 'json', 'vue' },
+  auto_install = true,
   -- ensure_installed = "all", -- or maintained
   highlight = {
     enable = true,
@@ -560,13 +585,15 @@ EOF
 " tpope/vim-commentary {{{
 nnoremap <leader>/ :Commentary<CR>
 vnoremap <leader>/ :Commentary<CR>
+nnoremap <M-/> :Commentary<CR>
+vnoremap <M-/> :Commentary<CR>
 "}}}
 
 
 " 'vim-test/vim-test' {{{
 let test#strategy = "vimux"
 let test#neovim#term_position = "vertical"
-let g:test#javascript#runner = 'vitest'
+let g:test#javascript#runner = 'jest'
 " https://github.com/vim-test/vim-test/issues/272
 let g:root_markers = ['package.json', '.git/']
 function! s:RunVimTest(cmd)
@@ -599,3 +626,4 @@ imap <silent><script><expr> <C-B> copilot#Accept("\<CR>")
 let g:copilot_no_tab_map = v:true
 
 " }}}
+
