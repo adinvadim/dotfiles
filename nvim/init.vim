@@ -8,6 +8,10 @@
 "
 "	@adinvadim
 "
+"
+" Inspired by
+" https://github.com/elijahmanor/dotfiles/blob/master/nvim/.config/nvim/init.vim
+" https://github.com/nicknisi/dotfiles/blob/main/config/nvim/
 
 " Sets {{{
 set exrc
@@ -78,28 +82,16 @@ set lazyredraw
 call plug#begin('~/.local/share/nvim/site/autoload')
 
 " Dashboard
-Plug 'glepnir/dashboard-nvim', { 'commit': 'a36b3232c98616149784f2ca2654e77caea7a522' }
 
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
-Plug 'editorconfig/editorconfig-vim'
-Plug 'jszakmeister/vim-togglecursor'
-Plug 'akinsho/nvim-bufferline.lua'
+" UI
+Plug 'glepnir/dashboard-nvim', { 'commit': 'a36b3232c98616149784f2ca2654e77caea7a522' }
+Plug 'kyazdani42/nvim-web-devicons'
+Plug 'nvim-lualine/lualine.nvim'
+Plug 'akinsho/nvim-bufferline.lua', { 'tag': 'v3.*' }
 Plug 'norcalli/nvim-colorizer.lua', { 'branch': 'color-editor' }
 Plug 'karb94/neoscroll.nvim'
-Plug 'akinsho/nvim-bufferline.lua'
-Plug 'kyazdani42/nvim-web-devicons'
-Plug 'windwp/nvim-autopairs'
-Plug 'vim-test/vim-test'
-Plug 'preservim/vimux'
-
-
-" tpope plugins
-Plug 'tpope/vim-surround'
-Plug 'tpope/vim-commentary'
-Plug 'tpope/vim-sleuth'
-Plug 'tpope/vim-repeat'
-
-" File Management
+Plug 'folke/which-key.nvim'
+Plug 'kyazdani42/nvim-tree.lua'
 Plug 'nvim-lua/popup.nvim'
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
@@ -108,11 +100,23 @@ Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'nvim-telescope/telescope-file-browser.nvim'
 Plug 'sudormrfbin/cheatsheet.nvim'
 Plug 'ThePrimeagen/harpoon'
-Plug 'kyazdani42/nvim-tree.lua'
 
-" Status Line
-Plug 'hoob3rt/lualine.nvim'
-Plug 'kyazdani42/nvim-web-devicons'
+
+Plug 'windwp/nvim-autopairs'
+Plug 'vim-test/vim-test'
+Plug 'preservim/vimux'
+Plug 'svermeulen/vimpeccable'
+Plug 'jszakmeister/vim-togglecursor'
+Plug 'editorconfig/editorconfig-vim'
+
+" tpope plugins
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-commentary'
+Plug 'tpope/vim-sleuth'
+Plug 'tpope/vim-repeat'
+
+" File Management
+
 
 " Themes
 Plug 'arcticicestudio/nord-vim'
@@ -123,25 +127,28 @@ Plug 'projekt0n/github-nvim-theme'
 
 
 " Syntax
-Plug 'posva/vim-vue'
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'posva/vim-vue'
 Plug 'JoosepAlviste/nvim-ts-context-commentstring'
 Plug 'delphinus/vim-firestore'
 Plug 'hashivim/vim-terraform'
+Plug 'github/copilot.vim'
+Plug 'gaoDean/autolist.nvim'
+Plug 'axelvc/template-string.nvim'
+
+
+" Coc
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'yaegassy/coc-tailwindcss3', {'do': 'yarn install --frozen-lockfile'}
 Plug 'yaegassy/coc-volar', {'do': 'yarn install --frozen-lockfile'}
+Plug 'yaegassy/coc-volar-tools', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-tsserver', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-vetur', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-html', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-prettier', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-snippets', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-json' , {'do': 'yarn install --frozen-lockfile'}
-Plug 'github/copilot.vim'
-Plug 'gaoDean/autolist.nvim'
-Plug 'axelvc/template-string.nvim'
 
-
-Plug 'hoob3rt/lualine.nvim'
 
 call plug#end()
 
@@ -149,6 +156,31 @@ call plug#end()
 " Leader {{{
 let mapleader = ","
 "}}}
+"
+"
+" 'folke/which-key.nvim' {{{
+lua << EOF
+local wk = require("which-key")
+
+wk.setup()
+wk.register({
+  ["<leader>"] = {
+    f = {
+      name = "+file",
+    },
+    b = {
+      name = "+buffer",
+      d = "Delete buffer",
+      n = "Next buffer",
+      p = "Prev buffer",
+      i = "Toggle pin",
+      g = "Pick buffer"
+    }
+  },
+  ["<leader>cheat"] = { name = "Show cheatsheet"}
+})
+EOF
+" }}
 
 
 " nvim-telescope/telescope.nvim {{{
@@ -158,7 +190,6 @@ require('telescope').setup {
     file_ignore_patterns = { "yarn.lock", "package-lock", "node_modules", "dist", "dump", ".git", ".DS_Store", "**/*.log" ,"*.log" }
   },
   extensions = {
-
     fzf = {
       theme = "dropdown",
       fuzzy = true,
@@ -176,23 +207,29 @@ require('telescope').setup {
       mappings = {
         i = {
           ["<M-d>"] = "delete_buffer",
+          ["<C-d>"] = "delete_buffer",
+          ["<Esc>"] = "close",
+          ["<C-j>"] = "move_selection_next",
+          ["<C-k>"] = "move_selection_previous",
         }
       }
     }
-  }
+  },
 }
 require('telescope').load_extension('fzf')
 require("telescope").load_extension "file_browser"
 require("telescope").load_extension('harpoon')
 require('telescope').load_extension('env')
 EOF
+
 "nnoremap <leader>fg :lua require('telescope.builtin').grep_string( { search = vim.fn.input("Grep for > ") } )<cr>
 nnoremap <leader>ff :lua require'telescope.builtin'.find_files{}<cr>
 nnoremap <leader>fb <cmd>Telescope buffers<cr>
+nnoremap <leader>fm <cmd>Telescope harpoon marks<cr>
 " nnoremap <Leader>fs :lua require'telescope.builtin'.file_browser{ cwd = vim.fn.expand('%:p:h') }<cr>
 nnoremap <leader>fs <cmd>lua require 'telescope'.extensions.file_browser.file_browser( { path = vim.fn.expand('%:p:h') } )<CR>
-nnoremap <Leader>fc :lua require'telescope.builtin'.git_status{}<cr>
-nnoremap <Leader>cb :lua require'telescope.builtin'.git_branches{}<cr>
+"nnoremap <Leader>fc :lua require'telescope.builtin'.git_status{}<cr>
+"nnoremap <Leader>cb :lua require'telescope.builtin'.git_branches{}<cr>
 nnoremap <leader>fr :lua require'telescope.builtin'.resume{}<CR>
 nnoremap <leader>fg <cmd>:lua require'telescope.builtin'.live_grep{}<cr>
 " nnoremap <leader>fg <cmd>lua require('telescope.builtin').live_grep( { file_ignore_patterns = { '**/*.spec.js' } } )<cr>
@@ -200,18 +237,30 @@ nnoremap <leader>fg <cmd>:lua require'telescope.builtin'.live_grep{}<cr>
 "nnoremap <leader>fgd :lua require'telescope.builtin'.live_grep{ search_dirs = { 'slices/admin' } }
 
 nnoremap <leader>cheat :Cheatsheet<cr>
-" nnoremap <leader>fh <cmd>Telescope help_tags<cr>
+
+"" nnoremap <leader>fh <cmd>Telescope help_tags<cr>
 "}}}
 
 
 " 'glephir/dashboard-nvim' {{{
 let g:dashboard_default_executive ='telescope'
-nmap <Leader>ss :<C-u>SessionSave<CR>
-nmap <Leader>sl :<C-u>SessionLoad<CR>
+
+lua << EOF
+local wk = require("which-key")
+
+wk.register({
+  ["<leader>"] = {
+    s = {
+      name = "+session",
+      s = { "<cmd>SessionSave<cr>", "Save session" },
+      l = { "<cmd>SessionLoad<cr>", "Load session" },
+    }
+  },
+})
+EOF
 nnoremap <silent> <Leader>fh :DashboardFindHistory<CR>
 nnoremap <silent> <Leader>ct :DashboardChangeColorscheme<CR>
-nnoremap <silent> <Leader>fm :DashboardJumpMark<CR>
-"nnoremap <silent> <Leader>nf :DashboardNewFile<CR>
+"" nnoremap <silent> <Leader>nf :DashboardNewFile<CR>
 let g:dashboard_custom_shortcut={
 \ 'last_session'       : ', s l',
 \ 'find_history'       : ', f h',
@@ -276,10 +325,15 @@ nmap <silent> gy <Plug>(coc-type-definition)
 nmap <silent> gi <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)
 
+nmap <leader>h :call coc#float#has_float() ? coc#float#close_all() : CocActionAsync('doHover')<CR>
+
 " Use K to show documentation in preview window.
 nnoremap <silent> K :call <SID>show_documentation()<CR>
 
 function! s:show_documentation()
+  if (coc#float#has_float())
+    call coc#float#close_all()
+  endif
   if (index(['vim','help'], &filetype) >= 0)
     execute 'h '.expand('<cword>')
   elseif (coc#rpc#ready())
@@ -418,12 +472,12 @@ set textwidth=80
 set colorcolumn=+1
 set colorcolumn=80
 
-"colorscheme github_dark_default
-"set background=dark " light or dark
-"highlight ColorColumn guibg=#090c10
+colorscheme github_dark_default
+set background=dark " light or dark
+highlight ColorColumn guibg=#090c10
 
-colorscheme github_light_default
-set background=light " light or dark
+" colorscheme github_light_default
+" set background=light " light or dark
 " colorscheme onebuddy
 "
 
@@ -469,8 +523,8 @@ require("bufferline").setup{
     view = "multiwindow",
     show_buffer_close_icons = true,
     show_close_icon = false,
-    separator_style = "slant",
-    diagnostics = "nvim_lsp",
+    separator_style = "thin",
+    diagnostics = "coc",
     diagnostics_update_in_insert = false,
     diagnostics_indicator = function(count, level, diagnostics_dict, context)
       return "("..count..")"
@@ -486,7 +540,19 @@ require("bufferline").setup{
   }
 }
 EOF
+
+nnoremap <leader>bi :BufferLineTogglePin<CR>
+command! BufDeleteOnly silent! execute "%bd|e#|bd#"
+nnoremap <leader>bD :BufDeleteOnly<CR>
 nnoremap <silent> gb :BufferLinePick<CR>
+nnoremap <leader>bg :BufferLinePick<CR>
+
+
+" Only work if add this lines to kitty
+" map ctrl+tab     send_text normal,application \x1b[9;5u
+" map ctrl+shift+tab send_text normal,application \x1b[9;6u
+nnoremap <silent> <C-TAB> :BufferLineCycleNext<CR>
+nnoremap <silent> <C-S-TAB> :BufferLineCyclePrev<CR>
 " }}}
 
 " Mappings {{{
@@ -526,7 +592,6 @@ require('nvim-tree').setup({
     group_empty = true,
   },
   filters = {
-    dotfiles = true,
   },
 
 })
@@ -559,20 +624,66 @@ EOF
 " }}}
 
 
-" Plug 'hoob3rt/lualine.nvim' {{{
+" Plug 'nvim-lualine/lualine.nvim' {{{
 lua << EOF
 require('plenary.reload').reload_module('lualine', true)
+
+local function modified()
+  if vim.bo.modified then
+    return '●'
+  elseif vim.bo.modifiable == false or vim.bo.readonly == true then
+    return '-'
+  end
+  return ''
+end
+
 require('lualine').setup({
+  extensions = {
+    'nvim-tree',
+  },
   options = {
-    theme = 'auto',
-    disabled_types = { 'NvimTree' }
+    globalstatus = true,
+      component_separators = '',
+    section_separators = '',
   },
   sections = {
+    lualine_a = {'mode'},
+    lualine_b = {
+      'branch',
+      {
+        'diagnostics',
+        sections = { 'error', },
+      },
+      {
+        'diagnostics',
+        sections = { 'warn', },
+      },
+    },
+    lualine_c = {{ 'filename', path = 1, file_status = false }},
+    lualine_x = {'encoding', 'fileformat', 'filesize', 'filetype'},
+    lualine_y = {'progress'},
+    lualine_z = {'location'}
+  },
+  winbar = {
+    lualine_a = {},
+    lualine_b = {},
+    lualine_c = {},
+    lualine_x = {'diagnostics'},
+    lualine_y = {'filetype'},
+    lualine_z = {{ 'filename', file_status=false }, modified}
+  },
+
+  inactive_winbar = {
+    lualine_a = {},
+    lualine_b = {},
+    lualine_c = {},
     lualine_x = {},
-    -- lualine_y = {},
-    -- lualine_z = {},
+    lualine_y = {},
+    lualine_z = {{ 'filename', file_status=false }, modified}
   }
+
 })
+
 EOF
 " }}}
 
@@ -618,6 +729,23 @@ nnoremap <leader>tl :call <SID>RunVimTest('TestLast')<cr>
 nnoremap <leader>tf :call <SID>RunVimTest('TestFile')<cr>
 nnoremap <leader>ts :call <SID>RunVimTest('TestSuite')<cr>
 nnoremap <leader>tv :call <SID>RunVimTest('TestVisit')<cr>
+
+lua << EOF
+local wk = require("which-key")
+
+wk.register({
+  ["<leader>"] = {
+    t = {
+      name = "+test",
+      t = "Test nearest",
+      l = "Test last",
+      f = "Test file",
+      s = "Test suite",
+      v = "Test visit",
+    },
+  },
+})
+EOF
 " }}}
 "
 
@@ -627,3 +755,47 @@ let g:copilot_no_tab_map = v:true
 
 " }}}
 
+
+" ThePrimeagen/harpoon {{{
+nnoremap <leader>a :lua require("harpoon.mark").add_file()<CR>
+" nnoremap <leader>m :lua require("harpoon.ui").toggle_quick_menu()<CR>
+nnoremap <leader>1 :lua require("harpoon.ui").nav_file(1)<CR>
+nnoremap <leader>2 :lua require("harpoon.ui").nav_file(2)<CR>
+nnoremap <leader>3 :lua require("harpoon.ui").nav_file(3)<CR>
+nnoremap <leader>4 :lua require("harpoon.ui").nav_file(4)<CR>
+" }}}
+
+
+
+" from https://github.com/nicknisi/dotfiles/blob/main/config/nvim/plugin/zoom.vim
+" Zoom into a pane, making it full screen (in a tab)
+" This plugin is useful when working with multiple panes
+" but temporarily needing to zoom into one to see more of
+" the code from that buffer.
+" Triggering the plugin again from the zoomed in tab brings it back
+" to its original pane location
+function s:Zoom()
+    if winnr('$') > 1
+        tab split
+    elseif len(filter(map(range(tabpagenr('$')), 'tabpagebuflist(v:val + 1)'),
+        \ 'index(v:val, ' . bufnr('') . ') >= 0')) > 1
+        tabclose
+    endif
+endfunction
+
+nnoremap <Plug>Zoom :<C-U>call <SID>Zoom()<cr>
+nmap <leader>z <Plug>Zoom
+
+
+" for command mode
+vnoremap <Tab> >gv
+vnoremap <S-Tab> <gv
+
+" for insert mode
+inoremap <S-Tab> <C-d>
+
+nnoremap <M-s> :w<CR>
+
+" Only work if add this line to kitty
+" map cmd+, send_text normal,application \x1b[44;9u
+nnoremap <M-,> :e ~/.config/nvim/init.vim<CR>
