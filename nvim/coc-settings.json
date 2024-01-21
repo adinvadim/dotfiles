@@ -8,6 +8,7 @@
     "json",
     "typescript",
     "typescript.tsx"
+    "markdown"
   ],
   "tsserver.formatOnType": false,
   "languageserver": {
