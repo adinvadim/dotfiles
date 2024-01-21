@@ -1,5 +1,14 @@
+snippet fprte "import fp-ts/ReaderTaskEither"
+import * as RTE from "fp-ts/ReaderTaskEither";
+endsnippet
+
 snippet fpte "import fp-ts/TaskEither"
 import * as TE from "fp-ts/TaskEither";
+endsnippet
+
+
+snippet fprte "import fp-ts/ReaderTaskEither"
+import * as RTE from "fp-ts/ReaderTaskEither";
 endsnippet
 
 
@@ -28,4 +37,16 @@ endsnippet
 
 snippet fpe "import fp-ts/Either"
 import * as E from "fp-ts/Either";
+endsnippet
+
+snippet scw "scenarioWrapper"
+scenarioWrapper(async (env) => {
+  $0
+}, ${1:'scenario name'})
+endsnippet
+
+snippet rsc "(env: FacebookApiEnv) => TE"
+(env: FacebookApiEnv) => pipe(
+  $0
+)
 endsnippet
