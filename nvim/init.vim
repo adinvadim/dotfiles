@@ -124,6 +124,7 @@ Plug 'bluz71/vim-nightfly-guicolors'
 "Plug 'dracula/vim', { 'as': 'dracula' }
 Plug '4513ECHO/vim-colors-hatsunemiku'
 Plug 'projekt0n/github-nvim-theme'
+Plug 'shaunsingh/solarized.nvim'
 
 
 " Syntax
@@ -135,6 +136,7 @@ Plug 'hashivim/vim-terraform'
 Plug 'github/copilot.vim'
 Plug 'gaoDean/autolist.nvim'
 Plug 'axelvc/template-string.nvim'
+" Plug 'roobert/tailwindcss-colorizer-cmp.nvim'
 
 
 " Coc
@@ -472,12 +474,23 @@ set textwidth=80
 set colorcolumn=+1
 set colorcolumn=80
 
-colorscheme github_dark_default
-set background=dark " light or dark
-highlight ColorColumn guibg=#090c10
+" colorscheme github_dark_high_contrast
+" set background=dark " light or dark
+" highlight ColorColumn guibg=#090c10
 
-" colorscheme github_light_default
-" set background=light " light or dark
+colorscheme github_light_colorblind
+set background=light " light or dark
+
+
+" set background=light
+" colorscheme solarized
+" let g:solarized_italic_comments = v:true
+" let g:solarized_italic_keywords = v:true
+" let g:solarized_italic_functions = v:true
+" let g:solarized_italic_variables = v:false
+" let g:solarized_contrast = v:true
+" let g:solarized_borders = v:true
+
 " colorscheme onebuddy
 "
 
@@ -498,7 +511,7 @@ highlight Comment cterm=italic gui=italic
 " }}}
 
 
-" norcalli/nvim-colorizer.lua {{{
+" norcalli/nvim-colorizer.lua {{
 lua require'colorizer'.setup()
 " }}}
 
@@ -606,7 +619,7 @@ nnoremap <leader>n <cmd>:NvimTreeFindFile<CR>
 "" nvim-treesitter {{{
 lua <<EOF
 require'nvim-treesitter.configs'.setup {
-  ensure_installed = { 'html', 'javascript', 'typescript', 'tsx', 'css', 'json', 'vue' },
+  ensure_installed = { 'html', 'javascript', 'typescript', 'tsx', 'css', 'json', 'vue', 'gitignore' },
   auto_install = true,
   -- ensure_installed = "all", -- or maintained
   highlight = {
@@ -639,12 +652,17 @@ end
 
 require('lualine').setup({
   extensions = {
-    'nvim-tree',
   },
   options = {
     globalstatus = true,
-      component_separators = '',
+    component_separators = '',
     section_separators = '',
+    disabled_filetypes = {
+      winbar = {
+        'dashboard',
+        'NvimTree'
+      }
+    },
   },
   sections = {
     lualine_a = {'mode'},
@@ -753,6 +771,10 @@ EOF
 imap <silent><script><expr> <C-B> copilot#Accept("\<CR>")
 let g:copilot_no_tab_map = v:true
 
+let g:copilot_filetypes = {
+\ 'yaml': v:true,
+\ }
+
 " }}}
 
 
@@ -796,6 +818,12 @@ inoremap <S-Tab> <C-d>
 
 nnoremap <M-s> :w<CR>
 
+nnoremap <M-w> :bd<CR>
+
+nnoremap <M-n> :enew<CR>
+
+
 " Only work if add this line to kitty
 " map cmd+, send_text normal,application \x1b[44;9u
 nnoremap <M-,> :e ~/.config/nvim/init.vim<CR>
+
