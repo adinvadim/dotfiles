@@ -13,6 +13,7 @@
     ~/.tmux.conf: .tmux.conf
     ~/.gitconfig: .gitconfig
     ~/.nuxtrc: .nuxtrc
+    ~/.ripgreprc: .ripgreprc
     ~/.zshrc: .zshrc
     ~/.config/nvim: nvim
     ~/bin/tat: bin/tat

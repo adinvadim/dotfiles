@@ -1,0 +1,4 @@
+--type-add
+vue:*.{vue}*
+test:*.{test|spec}*
+

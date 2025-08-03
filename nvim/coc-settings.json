@@ -23,11 +23,36 @@
   "tailwindCSS.headwind.runOnSave": true,
   "coc.source.file.ignoreHidden": true,
   "workspace.rootPatterns": [".git", "tailwind.config.js"],
+  "workspace.bottomUpFiletypes": ["*"],
+  "workspace.workspaceFolderCheckCwd": false,
   "tailwindCSS.files.exclude": [
     "**/.git/**",
     "**/node_modules/**",
     "**/.hg/**",
     "**/.svn/**",
     "**/.nuxt/tailwind.config.cjs"
-  ]
+  ],
+  "vue.inlayHints.inlineHandlerLeading": true,
+  "vue.inlayHints.missingProps": true,
+  "vue.inlayHints.optionsWrapper": true,
+  "inlayHint.enable": true,
+  "inlayHint.enableParameter": true,
+  "inlayHint.refreshOnInsertMode": true,
+  "typescript.inlayHints.parameterTypes.enabled": false,
+  "typescript.inlayHints.parameterNames.enabled": "all",
+  "javascript.inlayHints.parameterNames.enabled": "all",
+  "typescript.inlayHints.variableTypes.enabled": true,
+  "javascript.inlayHints.variableTypes.enabled": true,
+  "typescript.inlayHints.propertyDeclarationTypes.enabled": true,
+  "javascript.inlayHints.propertyDeclarationTypes.enabled": true,
+  "typescript.inlayHints.functionLikeReturnTypes.enabled": false,
+  "javascript.inlayHints.functionLikeReturnTypes.enabled": false,
+  "typescript.inlayHints.enumMemberValues.enabled": true,
+  "javascript.inlayHints.enumMemberValues.enabled": true,
+  "typescript.inlayHints.parameterNames.suppressWhenArgumentMatchesName": true,
+  "javascript.inlayHints.variableTypes.suppressWhenTypeMatchesName": true,
+  "list.source.symbols.excludes": [
+    "**/node_modules/**"
+  ],
+  "snippets.ultisnips.pythonPrompt": false
 }
