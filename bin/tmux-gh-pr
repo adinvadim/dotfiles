@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+dir="${1:-$PWD}"
+
+if [ ! -d "$dir" ]; then
+  exit 0
+fi
+
+if ! git -C "$dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  exit 0
+fi
+
+branch="$(git -C "$dir" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+if [ -z "$branch" ] || [ "$branch" = "HEAD" ]; then
+  exit 0
+fi
+
+if ! command -v gh >/dev/null 2>&1; then
+  exit 0
+fi
+
+ttl="${TMUX_GH_PR_TTL:-30}"
+tmp="${TMPDIR:-/tmp}"
+key="$(printf '%s\n' "$dir|$branch" | shasum -a 256 | awk '{print $1}')"
+cache="$tmp/tmux-gh-pr-$key"
+now="$(date +%s)"
+
+if [ -f "$cache" ]; then
+  IFS='|' read -r ts val < "$cache" || true
+  if [ -n "${ts:-}" ] && [ $((now - ts)) -lt "$ttl" ]; then
+    printf '%s' "${val:-}"
+    exit 0
+  fi
+fi
+
+export GH_PAGER=cat
+export GH_NO_UPDATE_NOTIFIER=1
+export GH_PROMPT_DISABLED=1
+
+val="$(cd "$dir" && gh pr view --json number,isDraft,state --template '{{if and .number (eq .state "OPEN")}}PR#{{.number}}{{if .isDraft}}(draft){{end}}{{end}}' 2>/dev/null || true)"
+
+# If we have an open PR, make it a terminal-clickable hyperlink (OSC 8).
+# Note: clicking in tmux status line is usually captured by tmux mouse mode,
+# so terminals often require Cmd+Click to open links. We also provide a tmux
+# mouse binding to open the PR URL (see .tmux.conf).
+#
+# tmux renders hyperlinks via: #[hyperlink=<url>]text#[hyperlink=]
+if [ -n "$val" ]; then
+  info="$(cd "$dir" && gh pr view --json url,number,isDraft,state --template '{{if and .number (eq .state "OPEN")}}{{.url}}| PR#{{.number}}{{if .isDraft}}(draft){{end}}{{end}}' 2>/dev/null || true)"
+  url="${info%%|*}"
+  label="${info#*|}"
+  if [ -n "$url" ] && [ -n "$label" ] && [ "$url" != "$info" ]; then
+    val="#[hyperlink=$url]$label#[hyperlink=]"
+  fi
+fi
+
+{ printf '%s|%s' "$now" "$val" > "$cache"; } >/dev/null 2>&1 || true
+printf '%s' "$val"

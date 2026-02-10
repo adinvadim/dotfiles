@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Prints either:
+# - type icon (mode=type)
+# - status dot (mode=status)
+# - icon+dot (mode=both)
+# for Claude Code / OpenCode running in a tmux window.
+#
+# Status symbols (matching claude-tmux):
+#   ● Working
+#   ○ Idle
+#   ◐ Waiting for input ([y/n])
+#   ? Unknown
+
+target="${1:-}"
+win_active="${2:-0}"
+mode="${3:-both}" # type|status|both
+
+if [ -z "$target" ]; then
+  exit 0
+fi
+
+if ! command -v tmux >/dev/null 2>&1; then
+  exit 0
+fi
+if ! command -v rg >/dev/null 2>&1; then
+  exit 0
+fi
+
+# Cache per window to avoid frequent capture-pane work.
+ttl="${TMUX_AI_STATUS_TTL:-2}"
+tmp="${TMPDIR:-/tmp}"
+key="$(printf '%s\n' "$target|$win_active" | shasum -a 256 | awk '{print $1}')"
+cache="$tmp/tmux-ai-status-$key"
+now="$(date +%s)"
+
+emit() {
+  # args: icon_fg icon sym dot_fg
+  local icon_fg="$1" icon="$2" sym="$3" dot_fg="$4"
+
+  case "$mode" in
+    type)
+      [ -n "$icon" ] || exit 0
+      printf '#[fg=%s]%s' "$icon_fg" "$icon"
+      ;;
+    status)
+      [ -n "$sym" ] || exit 0
+      printf '#[fg=%s]%s' "$dot_fg" "$sym"
+      ;;
+    *)
+      [ -n "$icon" ] || exit 0
+      printf '#[fg=%s]%s#[fg=%s]%s' "$icon_fg" "$icon" "$dot_fg" "$sym"
+      ;;
+  esac
+}
+
+if [ -f "$cache" ]; then
+  IFS='|' read -r ts icon_fg icon sym dot_fg < "$cache" || true
+  if [ -n "${ts:-}" ] && [ $((now - ts)) -lt "$ttl" ]; then
+    emit "${icon_fg:-#6c7086}" "${icon:-}" "${sym:-}" "${dot_fg:-#6c7086}"
+    exit 0
+  fi
+fi
+
+# Determine title color for idle dot (match title fg for this tab).
+if [ "$win_active" = "1" ]; then
+  title_fg="#11111b"
+else
+  title_fg="#a6adc8"
+fi
+
+# Detect Claude/OpenCode by inspecting processes on each pane TTY.
+pane=""
+kind=""
+while IFS='|' read -r pid tty; do
+  t="${tty##*/}"
+  [ -n "$t" ] || continue
+
+  procs="$(ps -t "$t" -o comm=,command= 2>/dev/null || true)"
+
+  # Prefer opencode if present.
+  if printf '%s\n' "$procs" | rg -qi '(\s|/|^)opencode(\s|$)|\.opencode/'; then
+    pane="$pid"
+    kind="opencode"
+    break
+  fi
+
+  # Otherwise remember claude if present.
+  if [ -z "$kind" ] && printf '%s\n' "$procs" | rg -qi '(^|\s)claude(\s|$)'; then
+    pane="$pid"
+    kind="claude"
+  fi
+done < <(tmux list-panes -t "$target" -F '#{pane_id}|#{pane_tty}' 2>/dev/null || true)
+
+if [ -z "$pane" ] || [ -z "$kind" ]; then
+  exit 0
+fi
+
+buf="$(tmux capture-pane -p -t "$pane" -S -240 2>/dev/null || true)"
+
+tail_n() {
+  awk -v n="$1" '{ a[NR] = $0 } END { s = NR - n + 1; if (s < 1) s = 1; for (i = s; i <= NR; i++) print a[i] }'
+}
+
+tail10="$(printf '%s\n' "$buf" | tail_n 10)"
+tail80="$(printf '%s\n' "$buf" | tail_n 80)"
+
+waiting_claude_re='\[[yY]/[nN]\]'
+waiting_opencode_re='\[[yY]/[nN]\]|bypass permissions|shift\+tab to cycle'
+intr_re='ctrl\+c to interrupt|esc(\s+to)?\s+interrupt|esc\s+interrupt'
+prog_re='[⬝■]{3,}|▣'
+prompt_re='(^|\s)❯'
+
+claude_icon="${TMUX_AI_CLAUDE_ICON:-✻}"
+opencode_icon="${TMUX_AI_OPENCODE_ICON:-🄾}"
+
+# Icon color: unique on inactive tabs, black on active tab for contrast.
+if [ "$win_active" = "1" ]; then
+  icon_fg="#11111b"
+else
+  if [ "$kind" = "claude" ]; then
+    icon_fg="#fab387"
+  else
+    icon_fg="#74c7ec"
+  fi
+fi
+
+if [ "$kind" = "claude" ]; then
+  icon="$claude_icon"
+else
+  icon="$opencode_icon"
+fi
+
+sym='?'
+dot_fg="#6c7086"
+
+if [ "$kind" = "opencode" ]; then
+  if printf '%s\n' "$tail10" | rg -qi "$waiting_opencode_re"; then
+    sym='◐'
+    dot_fg="#f9e2af"
+  elif printf '%s\n' "$tail80" | rg -qi "$intr_re" && printf '%s\n' "$tail80" | rg -q "$prog_re"; then
+    sym='●'
+    dot_fg="#a6e3a1"
+  else
+    sym='○'
+    dot_fg="$title_fg"
+  fi
+else
+  if printf '%s\n' "$tail10" | rg -qi "$waiting_claude_re"; then
+    sym='◐'
+    dot_fg="#f9e2af"
+  elif printf '%s\n' "$tail80" | rg -q "$prompt_re"; then
+    sym='○'
+    dot_fg="$title_fg"
+    if printf '%s\n' "$tail80" | rg -qi "$intr_re"; then
+      sym='●'
+      dot_fg="#a6e3a1"
+    fi
+  elif printf '%s\n' "$tail80" | rg -qi "$intr_re|Forming\.|thinking\)"; then
+    sym='●'
+    dot_fg="#a6e3a1"
+  else
+    sym='?'
+    dot_fg="#6c7086"
+  fi
+fi
+
+# Active tab has a light background; force a high-contrast dot color.
+if [ "$win_active" = "1" ]; then
+  dot_fg="#11111b"
+fi
+
+tmpf="$cache.tmp.$$"
+{ printf '%s|%s|%s|%s|%s' "$now" "$icon_fg" "$icon" "$sym" "$dot_fg" > "$tmpf" && mv -f "$tmpf" "$cache"; } >/dev/null 2>&1 || true
+
+emit "$icon_fg" "$icon" "$sym" "$dot_fg"
