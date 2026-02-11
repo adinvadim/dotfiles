@@ -22,6 +22,7 @@
     ~/bin/tmux-gh-pr: bin/tmux-gh-pr
     ~/bin/tmux-gh-pr-open: bin/tmux-gh-pr-open
     ~/bin/tmux-ai-status: bin/tmux-ai-status
+    ~/bin/tmux-subscript: bin/tmux-subscript
     ~/.editorconfig: .editorconfig
     ~/.config/kitty: kitty
     ~/.config/coc/ultisnips: ultisnips
