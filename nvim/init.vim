@@ -134,6 +134,8 @@ Plug 'JoosepAlviste/nvim-ts-context-commentstring'
 Plug 'delphinus/vim-firestore'
 Plug 'hashivim/vim-terraform'
 Plug 'github/copilot.vim'
+Plug 'folke/snacks.nvim'
+Plug 'coder/claudecode.nvim'
 Plug 'gaoDean/autolist.nvim'
 Plug 'axelvc/template-string.nvim'
 " Plug 'roobert/tailwindcss-colorizer-cmp.nvim'
@@ -590,23 +592,26 @@ nnoremap <silent> <C-S-TAB> :BufferLineCyclePrev<CR>
 " kyazdani42/nvim-tree.lua {{{
 
 lua << EOF
+local function my_on_attach(bufnr)
+  local api = require('nvim-tree.api')
+  local function opts(desc)
+    return { desc = 'nvim-tree: ' .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
+  end
+  api.config.mappings.default_on_attach(bufnr)
+  vim.keymap.set('n', 'u', api.tree.change_root_to_parent, opts('Up'))
+end
+
 require('nvim-tree').setup({
-  -- lsp_diagnostics = true,
+  on_attach = my_on_attach,
   sort_by = "case_sensitive",
   view = {
     adaptive_size = true,
-    mappings = {
-      list = {
-        { key = "u", action = "dir_up" },
-      },
-    },
   },
   renderer = {
     group_empty = true,
   },
   filters = {
   },
-
 })
 EOF
 
@@ -618,21 +623,23 @@ nnoremap <leader>n <cmd>:NvimTreeFindFile<CR>
 "
 "" nvim-treesitter {{{
 lua <<EOF
-require'nvim-treesitter.configs'.setup {
-  ensure_installed = { 'html', 'javascript', 'typescript', 'tsx', 'css', 'json', 'vue', 'gitignore' },
-  auto_install = true,
-  -- ensure_installed = "all", -- or maintained
-  highlight = {
-    enable = true,
-    additional_vim_regex_highlighting = true
-  },
-  indent = {
-    enable = false
-  },
-  context_commentstring = {
-    enable = true
+local ok, configs = pcall(require, 'nvim-treesitter.configs')
+if ok then
+  configs.setup {
+    ensure_installed = { 'html', 'javascript', 'typescript', 'tsx', 'css', 'json', 'vue', 'gitignore' },
+    auto_install = true,
+    highlight = {
+      enable = true,
+      additional_vim_regex_highlighting = true
+    },
+    indent = {
+      enable = false
+    },
+    context_commentstring = {
+      enable = true
+    }
   }
-}
+end
 EOF
 " }}}
 
@@ -785,6 +792,22 @@ nnoremap <leader>1 :lua require("harpoon.ui").nav_file(1)<CR>
 nnoremap <leader>2 :lua require("harpoon.ui").nav_file(2)<CR>
 nnoremap <leader>3 :lua require("harpoon.ui").nav_file(3)<CR>
 nnoremap <leader>4 :lua require("harpoon.ui").nav_file(4)<CR>
+" }}}
+
+" coder/claudecode.nvim {{{
+lua << EOF
+local ok, claudecode = pcall(require, "claudecode")
+if ok then
+  claudecode.setup({
+    terminal = {
+      provider = "none",  -- No terminal in nvim, use external Claude Code
+    },
+  })
+end
+EOF
+nnoremap <leader>cs :ClaudeCodeSend<CR>
+vnoremap <leader>cs :ClaudeCodeSend<CR>
+nnoremap <leader>ct :ClaudeCodeTreeAdd<CR>
 " }}}
 
 

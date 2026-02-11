@@ -29,5 +29,6 @@
     "**/.hg/**",
     "**/.svn/**",
     "**/.nuxt/tailwind.config.cjs"
-  ]
+  ],
+  "snippets.ultisnips.pythonPrompt": false
 }

@@ -26,3 +26,5 @@
 	required = true
 [core]
 	symlinks = true
+[coderabbit]
+	machineId = cli/bf443807d3e340a6baf82f5734ec9fdf
