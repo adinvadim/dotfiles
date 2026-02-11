@@ -44,6 +44,8 @@ set clipboard+=unnamedplus " Copy paste between vim and everything else
 set nojoinspaces " don't autoinsert two spaces after '.', '?', '!' for join command
 set showcmd " extra info at end of command line
 set wildignore+=*/node_modules/**
+
+set noemoji
 filetype plugin indent on
 
 " Always show the signcolumn, otherwise it would shift the text each time
@@ -85,21 +87,27 @@ call plug#begin('~/.local/share/nvim/site/autoload')
 
 " UI
 Plug 'glepnir/dashboard-nvim', { 'commit': 'a36b3232c98616149784f2ca2654e77caea7a522' }
-Plug 'kyazdani42/nvim-web-devicons'
+Plug 'nvim-tree/nvim-web-devicons'
 Plug 'nvim-lualine/lualine.nvim'
-Plug 'akinsho/nvim-bufferline.lua', { 'tag': 'v3.*' }
+Plug 'akinsho/nvim-bufferline.lua'
 Plug 'norcalli/nvim-colorizer.lua', { 'branch': 'color-editor' }
 Plug 'karb94/neoscroll.nvim'
 Plug 'folke/which-key.nvim'
 Plug 'kyazdani42/nvim-tree.lua'
 Plug 'nvim-lua/popup.nvim'
 Plug 'nvim-lua/plenary.nvim'
+Plug 'nvim-pack/nvim-spectre'
 Plug 'nvim-telescope/telescope.nvim'
 Plug 'LinArcX/telescope-env.nvim'
 Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'nvim-telescope/telescope-file-browser.nvim'
+Plug 'nvim-telescope/telescope-ui-select.nvim'
 Plug 'sudormrfbin/cheatsheet.nvim'
 Plug 'ThePrimeagen/harpoon'
+Plug 'rcarriga/nvim-notify'
+Plug 'kevinhwang91/promise-async'
+Plug 'kevinhwang91/nvim-ufo'
+Plug 'easymotion/vim-easymotion'
 
 
 Plug 'windwp/nvim-autopairs'
@@ -125,11 +133,13 @@ Plug 'bluz71/vim-nightfly-guicolors'
 Plug '4513ECHO/vim-colors-hatsunemiku'
 Plug 'projekt0n/github-nvim-theme'
 Plug 'shaunsingh/solarized.nvim'
+Plug 'folke/tokyonight.nvim'
 
 
 " Syntax
-Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-Plug 'posva/vim-vue'
+Plug 'nvim-treesitter/nvim-treesitter'
+Plug 'nvim-treesitter/nvim-treesitter-context'
+"Plug 'posva/vim-vue'
 Plug 'JoosepAlviste/nvim-ts-context-commentstring'
 Plug 'delphinus/vim-firestore'
 Plug 'hashivim/vim-terraform'
@@ -138,6 +148,8 @@ Plug 'folke/snacks.nvim'
 Plug 'coder/claudecode.nvim'
 Plug 'gaoDean/autolist.nvim'
 Plug 'axelvc/template-string.nvim'
+
+Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && npx --yes yarn install' }
 " Plug 'roobert/tailwindcss-colorizer-cmp.nvim'
 
 
@@ -147,11 +159,14 @@ Plug 'yaegassy/coc-tailwindcss3', {'do': 'yarn install --frozen-lockfile'}
 Plug 'yaegassy/coc-volar', {'do': 'yarn install --frozen-lockfile'}
 Plug 'yaegassy/coc-volar-tools', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-tsserver', {'do': 'yarn install --frozen-lockfile'}
-Plug 'neoclide/coc-vetur', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-html', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-prettier', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-snippets', {'do': 'yarn install --frozen-lockfile'}
 Plug 'neoclide/coc-json' , {'do': 'yarn install --frozen-lockfile'}
+"Plug 'hexh250786313/coc-pretty-ts-errors', {'do': 'yarn install --frozen-lockfile'}
+"Plug 'hexh250786313/coc-copilot', {'do': 'yarn install --frozen-lockfile'}
+
+" CocInstall @hexuhua/coc-copilot
 
 
 call plug#end()
@@ -191,7 +206,19 @@ EOF
 lua << EOF
 require('telescope').setup {
   defaults = {
-    file_ignore_patterns = { "yarn.lock", "package-lock", "node_modules", "dist", "dump", ".git", ".DS_Store", "**/*.log" ,"*.log" }
+
+    selection_strategy = "reset",
+    sorting_strategy = "descending",
+    scroll_strategy = "cycle",
+    color_devicons = true,
+
+    file_previewer = require("telescope.previewers").vim_buffer_cat.new,
+    grep_previewer = require("telescope.previewers").vim_buffer_vimgrep.new,
+    qflist_previewer = require("telescope.previewers").vim_buffer_qflist.new,
+    file_ignore_patterns = {
+      "node_modules"
+    }
+
   },
   extensions = {
     fzf = {
@@ -201,6 +228,11 @@ require('telescope').setup {
       override_file_sorter = true,
       case_mode = "smart_case"
     },
+    ["ui-select"] = {
+      require("telescope.themes").get_dropdown {
+        -- even more opts
+      },
+    }
   },
   pickers = {
     buffers = {
@@ -224,25 +256,38 @@ require('telescope').load_extension('fzf')
 require("telescope").load_extension "file_browser"
 require("telescope").load_extension('harpoon')
 require('telescope').load_extension('env')
+
+require("telescope").load_extension "ui-select"
+require("telescope").load_extension "notify"
 EOF
 
-"nnoremap <leader>fg :lua require('telescope.builtin').grep_string( { search = vim.fn.input("Grep for > ") } )<cr>
+
+" Files
+
 nnoremap <leader>ff :lua require'telescope.builtin'.find_files{}<cr>
+nnoremap <leader>fi :lua require'telescope.builtin'.find_files{ find_command = { "rg", "--no-ignore", "--files" } }<cr>
+nnoremap <leader>fh :lua require'telescope.builtin'.find_files{ find_command = { "rg", "--hidden", "--files" } }<cr>
+
+nnoremap <leader>fz :lua require('telescope.builtin').find_files({ find_command = { "rg", "--files", "--type", vim.fn.input("Type: ")} })<cr>
+
 nnoremap <leader>fb <cmd>Telescope buffers<cr>
 nnoremap <leader>fm <cmd>Telescope harpoon marks<cr>
 " nnoremap <Leader>fs :lua require'telescope.builtin'.file_browser{ cwd = vim.fn.expand('%:p:h') }<cr>
 nnoremap <leader>fs <cmd>lua require 'telescope'.extensions.file_browser.file_browser( { path = vim.fn.expand('%:p:h') } )<CR>
-"nnoremap <Leader>fc :lua require'telescope.builtin'.git_status{}<cr>
+nnoremap <Leader>gs :lua require'telescope.builtin'.git_status{}<cr>
+nnoremap <Leader>gc :lua require'telescope.builtin'.git_commits{}<cr>
 "nnoremap <Leader>cb :lua require'telescope.builtin'.git_branches{}<cr>
 nnoremap <leader>fr :lua require'telescope.builtin'.resume{}<CR>
 nnoremap <leader>fg <cmd>:lua require'telescope.builtin'.live_grep{}<cr>
+
+nnoremap <space><space>d <cmd>:lua require'telescope.builtin'.diagnostics{}<cr>
+
 " nnoremap <leader>fg <cmd>lua require('telescope.builtin').live_grep( { file_ignore_patterns = { '**/*.spec.js' } } )<cr>
 " nnoremap <leader>fgi <cmd>lua require('telescope.builtin').live_grep( { file_ignore_patterns = { vim.fn.input("Ignore pattern > ") } } )<cr>
 "nnoremap <leader>fgd :lua require'telescope.builtin'.live_grep{ search_dirs = { 'slices/admin' } }
 
 nnoremap <leader>cheat :Cheatsheet<cr>
 
-"" nnoremap <leader>fh <cmd>Telescope help_tags<cr>
 "}}}
 
 
@@ -295,6 +340,10 @@ let g:dashboard_custom_footer = s:footer
 " other plugin before putting this into your config.
 
 let g:coc_disable_transparent_cursor = 1
+
+
+"au FileType vue let b:coc_root_patterns = ['.git', '.env', 'package.json', 'tsconfig.json', 'jsconfig.json', 'vite.config.ts', 'vite.config.js', 'vue.config.js', 'nuxt.config.ts']
+"autocmd Filetype vue setlocal iskeyword+=-
 
 
 " Use <c-space> to trigger completion.
@@ -476,22 +525,8 @@ set textwidth=80
 set colorcolumn=+1
 set colorcolumn=80
 
-" colorscheme github_dark_high_contrast
-" set background=dark " light or dark
-" highlight ColorColumn guibg=#090c10
 
 colorscheme github_light_colorblind
-set background=light " light or dark
-
-
-" set background=light
-" colorscheme solarized
-" let g:solarized_italic_comments = v:true
-" let g:solarized_italic_keywords = v:true
-" let g:solarized_italic_functions = v:true
-" let g:solarized_italic_variables = v:false
-" let g:solarized_contrast = v:true
-" let g:solarized_borders = v:true
 
 " colorscheme onebuddy
 "
@@ -642,6 +677,8 @@ if ok then
 end
 EOF
 " }}}
+"
+
 
 
 " Plug 'nvim-lualine/lualine.nvim' {{{
@@ -729,7 +766,7 @@ vnoremap <M-/> :Commentary<CR>
 " 'vim-test/vim-test' {{{
 let test#strategy = "vimux"
 let test#neovim#term_position = "vertical"
-let g:test#javascript#runner = 'jest'
+" let g:test#javascript#runner = 'jest'
 " https://github.com/vim-test/vim-test/issues/272
 let g:root_markers = ['package.json', '.git/']
 function! s:RunVimTest(cmd)
@@ -749,6 +786,7 @@ function! s:RunVimTest(cmd)
 
     execute a:cmd
 endfunction
+
 nnoremap <leader>tt :call <SID>RunVimTest('TestNearest')<cr>
 nnoremap <leader>tl :call <SID>RunVimTest('TestLast')<cr>
 nnoremap <leader>tf :call <SID>RunVimTest('TestFile')<cr>
@@ -850,3 +888,39 @@ nnoremap <M-n> :enew<CR>
 " map cmd+, send_text normal,application \x1b[44;9u
 nnoremap <M-,> :e ~/.config/nvim/init.vim<CR>
 
+" 'kevinhwang91/nvim-ufo' {{{
+lua << EOF
+vim.o.foldcolumn = '1'
+vim.o.foldlevel = 99
+vim.o.foldlevelstart = 99
+vim.o.foldenable = true
+
+-- Using ufo provider need remap `zR` and `zM`. If Neovim is 0.6.1, remap yourself
+vim.keymap.set('n', 'zR', require('ufo').openAllFolds)
+vim.keymap.set('n', 'zM', require('ufo').closeAllFolds)
+
+-- Option 1: coc.nvim as LSP client
+require('ufo').setup()
+EOF
+
+" }}}
+
+" 'nvim-pack/nvim-spectre' {{{
+
+lua << EOF
+require('spectre').setup({ is_block_ui_break = true })
+
+vim.keymap.set('n', '<leader>S', '<cmd>lua require("spectre").toggle()<CR>', {
+    desc = "Toggle Spectre"
+})
+vim.keymap.set('n', '<leader>sw', '<cmd>lua require("spectre").open_visual({select_word=true})<CR>', {
+    desc = "Search current word"
+})
+vim.keymap.set('v', '<leader>sw', '<esc><cmd>lua require("spectre").open_visual()<CR>', {
+    desc = "Search current word"
+})
+vim.keymap.set('n', '<leader>sp', '<cmd>lua require("spectre").open_file_search({select_word=true})<CR>', {
+    desc = "Search on current file"
+})
+EOF
+" }}}
