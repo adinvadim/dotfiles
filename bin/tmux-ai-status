@@ -5,7 +5,7 @@ set -euo pipefail
 # - type icon (mode=type)
 # - status dot (mode=status)
 # - icon+dot (mode=both)
-# for Claude Code / OpenCode running in a tmux window.
+# for Claude Code / OpenCode / Codex running in a tmux window.
 #
 # Status symbols (matching claude-tmux):
 #   ● Working
@@ -86,6 +86,12 @@ while IFS='|' read -r pid tty; do
     break
   fi
 
+  # Then codex (runs as node, so match path or package name).
+  if [ -z "$kind" ] && printf '%s\n' "$procs" | rg -qi '(\s|/|^)codex(\s|$)|@openai/codex'; then
+    pane="$pid"
+    kind="codex"
+  fi
+
   # Otherwise remember claude if present.
   if [ -z "$kind" ] && printf '%s\n' "$procs" | rg -qi '(^|\s)claude(\s|$)'; then
     pane="$pid"
@@ -107,35 +113,52 @@ tail10="$(printf '%s\n' "$buf" | tail_n 10)"
 tail80="$(printf '%s\n' "$buf" | tail_n 80)"
 
 waiting_claude_re='\[[yY]/[nN]\]'
-waiting_opencode_re='\[[yY]/[nN]\]|bypass permissions|shift\+tab to cycle'
+waiting_opencode_re='\[[yY]/[nN]\]|bypass permissions|shift\+tab to cycle|Always allow|Confirm\s+Cancel'
+waiting_codex_re='\[[yY]/[nN]\]'
+idle_codex_re='\? for shortcuts|Plan mode|Full auto'
 intr_re='ctrl\+c to interrupt|esc(\s+to)?\s+interrupt|esc\s+interrupt'
 prog_re='[⬝■]{3,}|▣'
 prompt_re='(^|\s)❯'
 
 claude_icon="${TMUX_AI_CLAUDE_ICON:-✻}"
 opencode_icon="${TMUX_AI_OPENCODE_ICON:-🄾}"
+codex_icon="${TMUX_AI_CODEX_ICON:-$(printf '\xee\x9e\x95')}"  # U+E795 nf-dev-terminal
 
 # Icon color: unique on inactive tabs, black on active tab for contrast.
 if [ "$win_active" = "1" ]; then
   icon_fg="#11111b"
 else
-  if [ "$kind" = "claude" ]; then
-    icon_fg="#fab387"
-  else
-    icon_fg="#74c7ec"
-  fi
+  case "$kind" in
+    claude)   icon_fg="#fab387" ;;
+    opencode) icon_fg="#74c7ec" ;;
+    codex)    icon_fg="#a6e3a1" ;;
+  esac
 fi
 
-if [ "$kind" = "claude" ]; then
-  icon="$claude_icon"
-else
-  icon="$opencode_icon"
-fi
+case "$kind" in
+  claude)   icon="$claude_icon" ;;
+  opencode) icon="$opencode_icon" ;;
+  codex)    icon="$codex_icon" ;;
+esac
 
 sym='?'
 dot_fg="#6c7086"
 
-if [ "$kind" = "opencode" ]; then
+if [ "$kind" = "codex" ]; then
+  if printf '%s\n' "$tail10" | rg -qi "$waiting_codex_re"; then
+    sym='◐'
+    dot_fg="#f9e2af"
+  elif printf '%s\n' "$tail80" | rg -qi "$intr_re"; then
+    sym='●'
+    dot_fg="#a6e3a1"
+  elif printf '%s\n' "$tail10" | rg -qi "$idle_codex_re"; then
+    sym='○'
+    dot_fg="$title_fg"
+  else
+    sym='?'
+    dot_fg="#6c7086"
+  fi
+elif [ "$kind" = "opencode" ]; then
   if printf '%s\n' "$tail10" | rg -qi "$waiting_opencode_re"; then
     sym='◐'
     dot_fg="#f9e2af"

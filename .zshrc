@@ -10,7 +10,7 @@ export PATH="$N_PREFIX/bin:$PATH"
 export CLAUDE_CODE_DISABLE_COAUTHORSHIP=1
 
 alias cc="claude --dangerously-skip-permissions"
-alias cx="codex --yolo"
+alias cx="codex --yolo --no-alt-screen"
 
 # Claude Code with Ollama (local models)
 olcc() {
