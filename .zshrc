@@ -140,6 +140,29 @@ tmxobs() {
 }
 
 
+# Mac Mini remote tmux
+MINI_HOST="mini"
+
+tmini() {
+  local cmd="${1:-}"
+  case "$cmd" in
+    ls|list)
+      ssh "$MINI_HOST" 'bash -lc "~/bin/tmux-all list"'
+      ;;
+    ssh)
+      ssh "$MINI_HOST"
+      ;;
+    "")
+      # New local tmux tab → SSH to mini (tagged yellow)
+      tmux new-window -n 'mini' "ssh $MINI_HOST" \; set-option -w @is_mini 1
+      ;;
+    *)
+      # New local tmux tab named mini:<name> → SSH to mini
+      tmux new-window -n "mini:$cmd" "ssh $MINI_HOST" \; set-option -w @is_mini 1
+      ;;
+  esac
+}
+
 # bun completions
 [ -s "/Users/comp/.bun/_bun" ] && source "/Users/comp/.bun/_bun"
 

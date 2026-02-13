@@ -38,22 +38,46 @@ export GH_PAGER=cat
 export GH_NO_UPDATE_NOTIFIER=1
 export GH_PROMPT_DISABLED=1
 
-val="$(cd "$dir" && gh pr view --json number,isDraft,state --template '{{if and .number (eq .state "OPEN")}}PR#{{.number}}{{if .isDraft}}(draft){{end}}{{end}}' 2>/dev/null || true)"
+# Get PR info for current branch (any state)
+info="$(cd "$dir" && gh pr view --json number,isDraft,state,url \
+  --template '{{.number}}{{"\t"}}{{.isDraft}}{{"\t"}}{{.state}}{{"\t"}}{{.url}}' 2>/dev/null || true)"
 
-# If we have an open PR, make it a terminal-clickable hyperlink (OSC 8).
-# Note: clicking in tmux status line is usually captured by tmux mouse mode,
-# so terminals often require Cmd+Click to open links. We also provide a tmux
-# mouse binding to open the PR URL (see .tmux.conf).
-#
-# tmux renders hyperlinks via: #[hyperlink=<url>]text#[hyperlink=]
-if [ -n "$val" ]; then
-  info="$(cd "$dir" && gh pr view --json url,number,isDraft,state --template '{{if and .number (eq .state "OPEN")}}{{.url}}| PR#{{.number}}{{if .isDraft}}(draft){{end}}{{end}}' 2>/dev/null || true)"
-  url="${info%%|*}"
-  label="${info#*|}"
-  if [ -n "$url" ] && [ -n "$label" ] && [ "$url" != "$info" ]; then
-    val="#[hyperlink=$url]$label#[hyperlink=]"
-  fi
+if [ -z "$info" ]; then
+  { printf '%s|' "$now" > "$cache"; } >/dev/null 2>&1 || true
+  exit 0
 fi
+
+IFS=$'\t' read -r number draft state url <<< "$info"
+
+if [ -z "$number" ] || [ "$number" = "0" ]; then
+  { printf '%s|' "$now" > "$cache"; } >/dev/null 2>&1 || true
+  exit 0
+fi
+
+# Nerd font icon
+icon=$(printf '\xEF\x90\x87')  # U+F407 nf-oct-git_pull_request
+
+# Catppuccin Mocha colors per state
+case "$state" in
+  OPEN)
+    if [ "$draft" = "true" ]; then
+      color="#f9e2af"  # yellow for draft
+    else
+      color="#a6e3a1"  # green for open
+    fi
+    ;;
+  MERGED)  color="#cba6f7" ;;  # mauve for merged
+  CLOSED)  color="#f38ba8" ;;  # red for closed
+  *)       color="#cdd6f4" ;;
+esac
+
+label="PR#${number}"
+if [ "$draft" = "true" ] && [ "$state" = "OPEN" ]; then
+  label="${label}(draft)"
+fi
+
+# Colored icon + clickable hyperlink label
+val="#[fg=${color}]${icon} #[hyperlink=${url}]${label}#[hyperlink=]"
 
 { printf '%s|%s' "$now" "$val" > "$cache"; } >/dev/null 2>&1 || true
 printf '%s' "$val"

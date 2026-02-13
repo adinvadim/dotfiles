@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# tmux-tab-fmt — renders a full tmux tab (pill-shaped with powerline glyphs).
+# Yellow-themed for windows tagged with @is_mini=1.
+#
+# Usage (in tmux.conf):
+#   set -g window-status-format '#(~/bin/tmux-tab-fmt "#{window_id}" "#{window_active}" "#{b:pane_current_path}" "#{window_index}")'
+#   set -g window-status-current-format '#(~/bin/tmux-tab-fmt "#{window_id}" "#{window_active}" "#{b:pane_current_path}" "#{window_index}")'
+
+window_id="${1:-}"
+win_active="${2:-0}"
+dir="${3:-}"
+window_index="${4:-1}"
+pane_title="${5:-}"
+
+[ -z "$window_id" ] && exit 0
+[ -z "$dir" ] && dir="~"
+
+# Check if this is a mini (remote) window
+is_mini=$(tmux show-option -wqv -t "$window_id" @is_mini 2>/dev/null || true)
+
+if [ "$is_mini" = "1" ]; then
+  # For mini windows, use pane_title (set via OSC 2 by remote shell)
+  [ -n "$pane_title" ] && dir="$pane_title"
+  dir="mini:$dir"
+fi
+
+# Truncate to 18 chars
+if [ ${#dir} -gt 18 ]; then
+  dir="${dir:0:18}"
+fi
+
+# Colors
+bg="#1e1e2e"
+if [ "$is_mini" = "1" ]; then
+  if [ "$win_active" = "1" ]; then
+    pill="#f9e2af"; fg="#11111b"; sub="#453a18"
+  else
+    pill="#3b3520"; fg="#f9e2af"; sub="#8a7a45"
+  fi
+else
+  if [ "$win_active" = "1" ]; then
+    pill="#89b4fa"; fg="#11111b"; sub="#313244"
+  else
+    pill="#313244"; fg="#a6adc8"; sub="#585b70"
+  fi
+fi
+
+bold=""
+[ "$win_active" = "1" ] && bold=",bold"
+
+# Sub-scripts
+ai_type=$(~/bin/tmux-ai-status "$window_id" "$win_active" type 2>/dev/null || true)
+ai_status=$(~/bin/tmux-ai-status "$window_id" "$win_active" status 2>/dev/null || true)
+subscript=$(~/bin/tmux-subscript "$window_index" 2>/dev/null || true)
+
+# Powerline glyphs
+left=$(printf '\xee\x82\xb6')   # U+E0B6
+right=$(printf '\xee\x82\xb4')  # U+E0B4
+
+printf '#[fg=%s,bg=%s]%s#[fg=%s,bg=%s%s] %s #[fg=%s,bg=%s%s]%s#[fg=%s]%s #[fg=%s,bg=%s%s]%s #[fg=%s,bg=%s]%s' \
+  "$pill" "$bg" "$left" \
+  "$fg" "$pill" "$bold" "$ai_type" \
+  "$fg" "$pill" "$bold" "$dir" \
+  "$sub" "$subscript" \
+  "$fg" "$pill" "$bold" "$ai_status" \
+  "$pill" "$bg" "$right"

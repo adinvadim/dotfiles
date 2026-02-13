@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+tmux-all — tmux session manager
+
+Usage:
+  tmux-all              Interactive session picker (default)
+  tmux-all choose       Interactive session picker
+  tmux-all list         List all sessions
+  tmux-all attach NAME  Attach to session by name
+  tmux-all new NAME     Create and attach to a new session
+EOF
+  exit 0
+}
+
+list_sessions() {
+  tmux list-sessions -F '#{session_name}|#{session_windows} win|#{?session_attached,attached,detached}' 2>/dev/null || true
+}
+
+format_sessions() {
+  local sessions
+  sessions=$(list_sessions)
+  if [ -z "$sessions" ]; then
+    echo "No tmux sessions." >&2
+    return 1
+  fi
+  while IFS='|' read -r name wins status; do
+    printf '%-20s  %s  %s\n' "$name" "$wins" "$status"
+  done <<< "$sessions"
+}
+
+choose_session() {
+  local sessions raw selected
+  raw=$(list_sessions)
+  if [ -z "$raw" ]; then
+    echo "No tmux sessions." >&2
+    exit 1
+  fi
+
+  # Build formatted list
+  sessions=$(
+    while IFS='|' read -r name wins status; do
+      printf '%-20s  %s  %s\n' "$name" "$wins" "$status"
+    done <<< "$raw"
+  )
+
+  if command -v fzf >/dev/null 2>&1; then
+    selected=$(echo "$sessions" | fzf --height=40% --reverse --prompt="tmux> " --no-info) || exit 0
+  else
+    # Fallback: numbered menu
+    echo "Sessions:" >&2
+    echo "$sessions" | nl -ba >&2
+    printf 'Select [1-%d]: ' "$(echo "$sessions" | wc -l | tr -d ' ')" >&2
+    read -r num
+    selected=$(echo "$sessions" | sed -n "${num}p")
+  fi
+
+  if [ -z "${selected:-}" ]; then
+    exit 0
+  fi
+
+  local name
+  name=$(echo "$selected" | awk '{print $1}')
+  exec tmux attach-session -t "$name"
+}
+
+cmd="${1:-choose}"
+
+case "$cmd" in
+  -h|--help|help)
+    usage
+    ;;
+  list|ls)
+    format_sessions
+    ;;
+  choose|"")
+    choose_session
+    ;;
+  attach|a)
+    name="${2:-}"
+    if [ -z "$name" ]; then
+      echo "Usage: tmux-all attach <session_name>" >&2
+      exit 1
+    fi
+    exec tmux attach-session -t "$name"
+    ;;
+  new|n)
+    name="${2:-}"
+    if [ -z "$name" ]; then
+      echo "Usage: tmux-all new <session_name>" >&2
+      exit 1
+    fi
+    exec tmux new-session -s "$name"
+    ;;
+  *)
+    # Treat unknown arg as session name
+    exec tmux attach-session -t "$cmd"
+    ;;
+esac
