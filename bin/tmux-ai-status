@@ -113,7 +113,7 @@ tail10="$(printf '%s\n' "$buf" | tail_n 10)"
 tail80="$(printf '%s\n' "$buf" | tail_n 80)"
 
 waiting_claude_re='\[[yY]/[nN]\]'
-waiting_opencode_re='\[[yY]/[nN]\]|bypass permissions|shift\+tab to cycle|Always allow|Confirm\s+Cancel'
+waiting_opencode_re='\[[yY]/[nN]\]|bypass permissions|shift\+tab to cycle|Always allow|Confirm\s+Cancel|Permission required|Allow once|Allow always'
 waiting_codex_re='\[[yY]/[nN]\]'
 idle_codex_re='\? for shortcuts|Plan mode|Full auto'
 intr_re='ctrl\+c to interrupt|esc(\s+to)?\s+interrupt|esc\s+interrupt'
