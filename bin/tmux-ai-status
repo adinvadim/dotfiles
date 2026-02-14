@@ -114,8 +114,9 @@ tail80="$(printf '%s\n' "$buf" | tail_n 80)"
 
 waiting_claude_re='\[[yY]/[nN]\]'
 waiting_opencode_re='\[[yY]/[nN]\]|bypass permissions|shift\+tab to cycle|Always allow|Confirm\s+Cancel|Permission required|Allow once|Allow always'
-waiting_codex_re='\[[yY]/[nN]\]'
+waiting_codex_re='\[[yY]/[nN]\]|Implement this plan\?|Press enter to confirm or esc'
 idle_codex_re='\? for shortcuts|Plan mode|Full auto'
+running_codex_re='Waiting for background terminal|Running:'
 intr_re='ctrl\+c to interrupt|esc(\s+to)?\s+interrupt|esc\s+interrupt'
 prog_re='[⬝■]{3,}|▣'
 prompt_re='(^|\s)❯'
@@ -149,6 +150,9 @@ if [ "$kind" = "codex" ]; then
     sym='◐'
     dot_fg="#f9e2af"
   elif printf '%s\n' "$tail80" | rg -qi "$intr_re"; then
+    sym='●'
+    dot_fg="#a6e3a1"
+  elif printf '%s\n' "$tail80" | rg -qi "$running_codex_re"; then
     sym='●'
     dot_fg="#a6e3a1"
   elif printf '%s\n' "$tail10" | rg -qi "$idle_codex_re"; then
