@@ -12,6 +12,11 @@
     - ~/.claude/skills
     - ~/bin
 
+- shell:
+  # Make AGENTS.md / CLAUDE.md linking idempotent (backup if a regular file already exists).
+  - sh -c 'if [ -e "$HOME/.codex/AGENTS.md" ] && [ ! -L "$HOME/.codex/AGENTS.md" ]; then mv "$HOME/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.claude/CLAUDE.md" ] && [ ! -L "$HOME/.claude/CLAUDE.md" ]; then mv "$HOME/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
+
 - link:
     ~/.tmux.conf: .tmux.conf
     ~/.gitconfig: .gitconfig
@@ -28,8 +33,13 @@
     ~/bin/tmux-ai-status: bin/tmux-ai-status
     ~/bin/tmux-subscript: bin/tmux-subscript
     ~/bin/db: bin/db
+    ~/bin/ohmydb: bin/ohmydb
+    ~/bin/docs-list: bin/docs-list
     /opt/homebrew/share/zsh/site-functions/_db: bin/_db
+    /opt/homebrew/share/zsh/site-functions/_ohmydb: bin/_ohmydb
     ~/.editorconfig: .editorconfig
+    ~/.codex/AGENTS.md: AGENTS.md
+    ~/.claude/CLAUDE.md: CLAUDE.md
     ~/.config/kitty: kitty
     ~/.config/coc/ultisnips: ultisnips
     ~/safari-global.css: safari/global.css
@@ -46,6 +56,6 @@
 - shell:
   - [git submodule update --init --recursive, Installing submodules]
   - sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
-  - [sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)", Installing oh-my-zsh]
-  - mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
-  - git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+  - sh -c 'if [ ! -d "$HOME/.oh-my-zsh" ]; then RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; fi'
+  - sh -c 'if [ -f "$HOME/.zshrc.pre-oh-my-zsh" ]; then mv "$HOME/.zshrc.pre-oh-my-zsh" "$HOME/.zshrc"; fi'
+  - sh -c 'if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then mkdir -p "$HOME/.tmux/plugins" && git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"; fi'

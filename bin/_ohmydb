@@ -1,0 +1,79 @@
+#compdef ohmydb
+
+_ohmydb_databases() {
+  local -a dbs
+  local pg_host="${PGHOST:-localhost}"
+  local pg_port="${PGPORT:-5432}"
+  local pg_user="${PGUSER:-$USER}"
+  dbs=(${(f)"$(psql -h "$pg_host" -p "$pg_port" -U "$pg_user" -Atc "SELECT datname FROM pg_database WHERE datistemplate = false AND datname != 'postgres' ORDER BY datname" postgres 2>/dev/null)"})
+  compadd -a dbs
+}
+
+_ohmydb() {
+  local -a commands=(
+    'create:Create PostgreSQL database, print connection info'
+    'c:Create database (alias)'
+    'new:Create database (alias)'
+    'drop:Drop PostgreSQL database'
+    'rm:Drop database (alias)'
+    'list:List PG databases + Redis + MinIO'
+    'ls:List (alias)'
+    'url:Print DATABASE_URL (pipe-friendly)'
+    'u:Print DATABASE_URL (alias)'
+    'env:Print .env block'
+    'e:Print .env block (alias)'
+    'clone:Clone database via createdb -T'
+    'cp:Clone database (alias)'
+    'reset:Drop + recreate database'
+    'redis:Redis connection info'
+    'r:Redis info (alias)'
+    'minio:MinIO connection info + bucket list'
+    'm:MinIO info (alias)'
+    'info:PG + Redis + MinIO status overview'
+    'i:Status overview (alias)'
+    'open:Open in TablePlus'
+    'o:Open in TablePlus (alias)'
+    'psql:Open psql/pgcli shell'
+    'sh:Open shell (alias)'
+    'setup:Install/start PG + Redis via brew + start MinIO'
+  )
+
+  local -a flags=(
+    '--json[JSON output]'
+    '-j[JSON output]'
+    '--force[Skip confirmations]'
+    '-f[Skip confirmations]'
+    '--no-input[Disable prompts]'
+    '--no-color[Disable colored output]'
+    '--version[Print version]'
+    '--help[Show help]'
+    '-h[Show help]'
+  )
+
+  if (( CURRENT == 2 )); then
+    _describe 'command' commands
+    _arguments $flags
+  elif (( CURRENT == 3 )); then
+    case "${words[2]}" in
+      open|o)
+        local -a open_args
+        open_args=(
+          '--app:Open TablePlus app (no DB selection)'
+        )
+        _describe 'open args' open_args
+        _ohmydb_databases
+        ;;
+      create|c|new|drop|rm|url|u|env|e|reset|psql|sh|clone|cp)
+        _ohmydb_databases
+        ;;
+    esac
+  elif (( CURRENT == 4 )); then
+    case "${words[2]}" in
+      clone|cp)
+        _ohmydb_databases
+        ;;
+    esac
+  fi
+}
+
+_ohmydb "$@"

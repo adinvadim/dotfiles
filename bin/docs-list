@@ -1,0 +1,423 @@
+#!/usr/bin/env python3
+"""
+docs-list: index markdown documentation under nested docs/ directories.
+
+By default it starts at the current working directory and discovers every
+directory named "docs" below it, then lists markdown files inside.
+
+Front matter (optional, YAML-ish, delimited by ---) supports:
+  summary: "One line summary"
+  read_when: [tag, tag2]   OR
+  read_when:
+    - tag
+    - tag2
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+from dataclasses import dataclass
+from typing import Iterable, List, Optional, Sequence, Tuple
+
+__version__ = "0.1.0"
+
+
+DEFAULT_IGNORED_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    "node_modules",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".next",
+    ".nuxt",
+    ".turbo",
+    ".cache",
+    "dist",
+    "build",
+    "target",
+    "coverage",
+}
+
+
+@dataclass(frozen=True)
+class DocFile:
+    path: str  # relative to root
+    docs_dir: str  # relative to root (the docs/ directory containing this file)
+    summary: str
+    read_when: Tuple[str, ...]
+    title: str
+    has_front_matter: bool
+    has_summary: bool
+
+
+def _eprint(msg: str) -> None:
+    print(msg, file=sys.stderr)
+
+
+def _is_hidden_dirname(name: str) -> bool:
+    return name.startswith(".") and name not in (".", "..")
+
+
+def _norm_exts(exts_csv: str) -> Tuple[str, ...]:
+    exts: List[str] = []
+    for raw in exts_csv.split(","):
+        s = raw.strip().lower()
+        if not s:
+            continue
+        if s.startswith("."):
+            s = s[1:]
+        exts.append(s)
+    return tuple(sorted(set(exts))) or ("md",)
+
+
+def _should_prune_dir(
+    name: str,
+    *,
+    ignored_dirnames: Sequence[str],
+    include_hidden: bool,
+) -> bool:
+    if not include_hidden and _is_hidden_dirname(name):
+        return True
+    return name in ignored_dirnames
+
+
+def find_docs_dirs(
+    root: str,
+    *,
+    ignored_dirnames: Sequence[str],
+    include_hidden: bool,
+    follow_symlinks: bool,
+) -> List[str]:
+    docs_dirs: List[str] = []
+    for dirpath, dirnames, _filenames in os.walk(root, followlinks=follow_symlinks):
+        # Prune early to keep traversal fast.
+        dirnames[:] = [
+            d
+            for d in dirnames
+            if not _should_prune_dir(d, ignored_dirnames=ignored_dirnames, include_hidden=include_hidden)
+        ]
+
+        if "docs" in dirnames:
+            docs_dirs.append(os.path.join(dirpath, "docs"))
+            # Avoid walking into docs/ as part of the main scan; we'll walk it separately.
+            dirnames[:] = [d for d in dirnames if d != "docs"]
+    return sorted(set(docs_dirs))
+
+
+def iter_markdown_files(
+    docs_dir: str,
+    *,
+    exts: Sequence[str],
+    ignored_dirnames: Sequence[str],
+    include_hidden: bool,
+    follow_symlinks: bool,
+) -> Iterable[str]:
+    for dirpath, dirnames, filenames in os.walk(docs_dir, followlinks=follow_symlinks):
+        dirnames[:] = [
+            d
+            for d in dirnames
+            if not _should_prune_dir(d, ignored_dirnames=ignored_dirnames, include_hidden=include_hidden)
+        ]
+        for fn in filenames:
+            if fn.startswith(".") and not include_hidden:
+                continue
+            lower = fn.lower()
+            if any(lower.endswith("." + ext) for ext in exts):
+                yield os.path.join(dirpath, fn)
+
+
+_RE_H1 = re.compile(r"^#\s+(.+?)\s*$")
+_RE_SUMMARY = re.compile(r"^\s*summary\s*:\s*(.*?)\s*$")
+_RE_READ_WHEN = re.compile(r"^\s*read_when\s*:\s*(.*?)\s*$")
+_RE_LIST_ITEM = re.compile(r"^\s*-\s*(.*?)\s*$")
+
+
+def _strip_quotes(s: str) -> str:
+    s = s.strip()
+    if len(s) >= 2 and ((s[0] == s[-1] == '"') or (s[0] == s[-1] == "'")):
+        return s[1:-1].strip()
+    return s
+
+
+def _parse_inline_list(s: str) -> Optional[Tuple[str, ...]]:
+    s = s.strip()
+    if not (s.startswith("[") and s.endswith("]")):
+        return None
+    inner = s[1:-1].strip()
+    if not inner:
+        return tuple()
+    items: List[str] = []
+    for part in inner.split(","):
+        item = _strip_quotes(part.strip())
+        if item:
+            items.append(item)
+    return tuple(items)
+
+
+def parse_front_matter_and_title(path: str) -> Tuple[bool, str, Tuple[str, ...], str, bool]:
+    """
+    Returns:
+      has_front_matter, summary, read_when, title, has_summary
+    """
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            # We only need the top of the file for front matter + first H1.
+            head = f.read(65536)
+    except OSError as e:
+        raise RuntimeError(f"Failed to read {path}: {e}") from e
+
+    lines = head.splitlines()
+    summary = ""
+    read_when: Tuple[str, ...] = tuple()
+    title = ""
+    has_front_matter = False
+    has_summary = False
+
+    i = 0
+    if lines and lines[0].strip() == "---":
+        has_front_matter = True
+        i = 1
+        in_read_when_block = False
+        read_when_items: List[str] = []
+
+        while i < len(lines):
+            line = lines[i]
+            if line.strip() == "---":
+                i += 1
+                break
+
+            m = _RE_SUMMARY.match(line)
+            if m:
+                summary = _strip_quotes(m.group(1))
+                has_summary = bool(summary)
+                in_read_when_block = False
+                i += 1
+                continue
+
+            m = _RE_READ_WHEN.match(line)
+            if m:
+                raw = m.group(1).strip()
+                in_read_when_block = False
+                read_when_items = []
+
+                if raw:
+                    inline = _parse_inline_list(raw)
+                    if inline is not None:
+                        read_when = inline
+                    else:
+                        read_when = ( _strip_quotes(raw), )
+                else:
+                    in_read_when_block = True
+                i += 1
+                continue
+
+            if in_read_when_block:
+                mi = _RE_LIST_ITEM.match(line)
+                if mi:
+                    item = _strip_quotes(mi.group(1))
+                    if item:
+                        read_when_items.append(item)
+                    i += 1
+                    continue
+                # End of list.
+                in_read_when_block = False
+                read_when = tuple(read_when_items)
+
+            i += 1
+
+        if in_read_when_block:
+            read_when = tuple(read_when_items)
+
+    # Title: first H1 after front matter (or from start if no front matter).
+    while i < len(lines):
+        line = lines[i].strip()
+        if not line:
+            i += 1
+            continue
+        m = _RE_H1.match(lines[i])
+        if m:
+            title = m.group(1).strip()
+        break
+
+    return has_front_matter, summary, read_when, title, has_summary
+
+
+def build_index(
+    root: str,
+    *,
+    exts: Sequence[str],
+    ignored_dirnames: Sequence[str],
+    include_hidden: bool,
+    follow_symlinks: bool,
+) -> Tuple[List[str], List[DocFile], List[str]]:
+    errors: List[str] = []
+    docs_dirs_abs = find_docs_dirs(
+        root,
+        ignored_dirnames=ignored_dirnames,
+        include_hidden=include_hidden,
+        follow_symlinks=follow_symlinks,
+    )
+
+    docs_dirs_rel = [os.path.relpath(p, root) for p in docs_dirs_abs]
+
+    docs: List[DocFile] = []
+    for docs_dir_abs, docs_dir_rel in zip(docs_dirs_abs, docs_dirs_rel):
+        for file_abs in iter_markdown_files(
+            docs_dir_abs,
+            exts=exts,
+            ignored_dirnames=ignored_dirnames,
+            include_hidden=include_hidden,
+            follow_symlinks=follow_symlinks,
+        ):
+            file_rel = os.path.relpath(file_abs, root)
+            try:
+                has_fm, summary, read_when, title, has_summary = parse_front_matter_and_title(file_abs)
+            except Exception as e:  # noqa: BLE001 - CLI tool, keep going.
+                errors.append(str(e))
+                continue
+
+            docs.append(
+                DocFile(
+                    path=file_rel,
+                    docs_dir=docs_dir_rel,
+                    summary=summary,
+                    read_when=tuple(read_when),
+                    title=title,
+                    has_front_matter=has_fm,
+                    has_summary=has_summary,
+                )
+            )
+
+    docs.sort(key=lambda d: d.path)
+    return docs_dirs_rel, docs, errors
+
+
+def _matches_when(doc: DocFile, whens: Sequence[str]) -> bool:
+    if not whens:
+        return True
+    tags = {t.strip() for t in doc.read_when if t.strip()}
+    if not tags:
+        return False
+    for w in whens:
+        if w in tags:
+            return True
+    return False
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    argv = list(argv or sys.argv[1:])
+    parser = argparse.ArgumentParser(
+        prog="docs-list",
+        description="List markdown files under nested docs/ directories (root defaults to CWD).",
+        add_help=True,
+    )
+    parser.add_argument("--root", default=".", help="Root directory to scan (default: .)")
+    parser.add_argument(
+        "--ext",
+        default="md",
+        help="Comma-separated extensions to include (default: md). Example: --ext md,mdx",
+    )
+    parser.add_argument("--plain", action="store_true", help="Plain tab-separated output: path<TAB>summary")
+    parser.add_argument("--json", action="store_true", help="JSON output (machine-friendly)")
+    parser.add_argument("--when", action="append", default=[], help="Filter by read_when tag (repeatable)")
+    parser.add_argument("--require-summary", action="store_true", help="Exit non-zero if any file lacks summary")
+    parser.add_argument("--include-hidden", action="store_true", help="Also scan hidden directories/files")
+    parser.add_argument("--follow-symlinks", action="store_true", help="Follow symlinks while scanning")
+    parser.add_argument("--ignore-dir", action="append", default=[], help="Ignore directory name (repeatable)")
+    parser.add_argument("--version", action="version", version=__version__)
+    args = parser.parse_args(argv)
+
+    if args.plain and args.json:
+        _eprint("error: --plain and --json are mutually exclusive")
+        return 2
+
+    root = os.path.abspath(args.root)
+    exts = _norm_exts(args.ext)
+    ignored = tuple(sorted(set(DEFAULT_IGNORED_DIRS).union(set(args.ignore_dir or []))))
+
+    docs_dirs, docs, errors = build_index(
+        root,
+        exts=exts,
+        ignored_dirnames=ignored,
+        include_hidden=bool(args.include_hidden),
+        follow_symlinks=bool(args.follow_symlinks),
+    )
+
+    if errors:
+        for e in errors:
+            _eprint(f"warn: {e}")
+
+    # Apply --when filter
+    whens = [w.strip() for w in (args.when or []) if w.strip()]
+    docs = [d for d in docs if _matches_when(d, whens)]
+
+    missing_summary = [d for d in docs if not d.has_summary]
+    if args.require_summary and missing_summary:
+        for d in missing_summary:
+            _eprint(f"error: missing summary in {d.path}")
+        return 1
+
+    if args.json:
+        payload = {
+            "root": root,
+            "docs_dirs": docs_dirs,
+            "count": len(docs),
+            "files": [
+                {
+                    "path": d.path,
+                    "docs_dir": d.docs_dir,
+                    "summary": d.summary,
+                    "read_when": list(d.read_when),
+                    "title": d.title,
+                    "has_front_matter": d.has_front_matter,
+                    "has_summary": d.has_summary,
+                }
+                for d in docs
+            ],
+        }
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    if args.plain:
+        for d in docs:
+            print(f"{d.path}\t{d.summary}")
+        return 0
+
+    # Human output: group by docs_dir
+    by_docs_dir: dict[str, List[DocFile]] = {}
+    for d in docs:
+        by_docs_dir.setdefault(d.docs_dir, []).append(d)
+
+    if not docs_dirs:
+        _eprint("No docs/ directories found.")
+        return 0
+
+    total_files = len(docs)
+    print(f"Found {len(docs_dirs)} docs/ director{'y' if len(docs_dirs) == 1 else 'ies'}, {total_files} file(s).")
+    for docs_dir in sorted(by_docs_dir.keys()):
+        items = sorted(by_docs_dir[docs_dir], key=lambda d: d.path)
+        print("")
+        print(f"{docs_dir}/ ({len(items)})")
+        for d in items:
+            summary = d.summary or (d.title or "")
+            if not summary:
+                summary = "(no summary)"
+            print(f"  {d.path}  {summary}")
+            if d.read_when:
+                print(f"    read_when: {', '.join(d.read_when)}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
