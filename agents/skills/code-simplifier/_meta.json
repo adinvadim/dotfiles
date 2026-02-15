@@ -1,0 +1,11 @@
+{
+  "owner": "getsentry",
+  "slug": "code-simplifier",
+  "displayName": "Code Simplifier",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771130961258,
+    "commit": "https://github.com/getsentry/skills/blob/main/plugins/sentry-skills/agents/code-simplifier.md"
+  },
+  "history": []
+}
