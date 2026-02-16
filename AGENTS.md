@@ -37,14 +37,18 @@ Vadim owns this. Start: say hi + 1 motivating line. Work style: telegraph; noun-
 - GitHub CLI for PRs/CI/releases. Given issue/PR URL (or /pull/5): use gh, not web search.
 - Use gh for adding github secrets if user ask
 
-### db
-
 ### ohmydb
 
-- Use when you need local Postgres/Redis/MinIO in dev. Prefer this over Docker for these services.
-- `ohmydb` (no args) shows PG databases + Redis info + MinIO buckets.
+- Use when you need local Postgres/Redis/ClickHouse/MinIO in dev. Prefer this over Docker for these services.
+- `ohmydb` (no args) shows PG databases + Redis info + ClickHouse databases + MinIO buckets.
+- ClickHouse is managed locally by `ohmydb setup` (no manual credential config expected).
 - Back-compat: `db` still works but just forwards to `ohmydb`.
 - `ohmydb --help` for details.
+
+### firecrawl mcp
+
+- Use for live crawl/scrape/extract/search tasks when web data is needed in-agent.
+- Preconfigured globally as MCP server `firecrawl` for Codex, Claude Code, and OpenCode.
 
 ### docs-list
 

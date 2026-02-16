@@ -10,6 +10,18 @@ PG_PORT="${PGPORT:-5432}"
 REDIS_HOST="${DB_REDIS_HOST:-localhost}"
 REDIS_PORT="${DB_REDIS_PORT:-6379}"
 
+# ClickHouse
+CH_HOST="${OHMYDB_CH_HOST:-${CLICKHOUSE_HOST:-127.0.0.1}}"
+CH_PORT="${OHMYDB_CH_PORT:-${CLICKHOUSE_PORT:-19000}}"
+CH_HTTP_PORT="${OHMYDB_CH_HTTP_PORT:-${CLICKHOUSE_HTTP_PORT:-18123}}"
+CH_USER="${OHMYDB_CH_USER:-${CLICKHOUSE_USER:-default}}"
+CH_PASSWORD="${OHMYDB_CH_PASSWORD:-${CLICKHOUSE_PASSWORD:-}}"
+CH_DATABASE="${OHMYDB_CH_DATABASE:-${CLICKHOUSE_DATABASE:-default}}"
+CH_DATA_DIR="${OHMYDB_CH_DATA_DIR:-${HOME}/.local/share/ohmydb/clickhouse}"
+CH_PID_FILE="${OHMYDB_CH_PID_FILE:-${HOME}/.local/state/ohmydb/clickhouse.pid}"
+CH_LOG_FILE="${OHMYDB_CH_LOG_FILE:-${HOME}/.local/state/ohmydb/clickhouse.log}"
+CH_ERROR_LOG_FILE="${OHMYDB_CH_ERROR_LOG_FILE:-${HOME}/.local/state/ohmydb/clickhouse.error.log}"
+
 # MinIO (S3-compatible)
 MINIO_HOST="${OHMYDB_MINIO_HOST:-${MINIO_HOST:-localhost}}"
 MINIO_PORT="${OHMYDB_MINIO_PORT:-${MINIO_PORT:-9000}}"
@@ -82,12 +94,130 @@ tableplus_open_pg() {
   open -a TablePlus "$url"
 }
 
+tableplus_open_clickhouse() {
+  local db_name="${1:-$CH_DATABASE}"
+  local auth
+  if [[ -n "$CH_PASSWORD" ]]; then
+    auth="${CH_USER}:${CH_PASSWORD}@"
+  else
+    auth="${CH_USER}@"
+  fi
+  local url
+  url="clickhouse://${auth}${CH_HOST}:${CH_PORT}/${db_name}"
+  url="${url}?statusColor=0B74DE&env=local&name=clickhouse_${db_name}"
+  open -a TablePlus "$url"
+}
+
+ensure_tableplus_installed() {
+  [[ -d "/Applications/TablePlus.app" ]] || die "TablePlus not found. Install: brew install --cask tableplus"
+}
+
 pg_running() {
   pg_isready -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" >/dev/null 2>&1
 }
 
 redis_running() {
   redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" ping >/dev/null 2>&1
+}
+
+clickhouse_http_url() {
+  echo "http://${CH_HOST}:${CH_HTTP_PORT}"
+}
+
+clickhouse_native_url() {
+  echo "clickhouse://${CH_USER}@${CH_HOST}:${CH_PORT}/${CH_DATABASE}"
+}
+
+clickhouse_bin_path() {
+  command -v clickhouse 2>/dev/null || true
+}
+
+clickhouse_installed() {
+  [[ -n "$(clickhouse_bin_path)" ]]
+}
+
+clickhouse_unquarantine() {
+  # Best-effort: remove Gatekeeper quarantine bit for the cask binary.
+  local bin
+  bin="$(clickhouse_bin_path)"
+  [[ -z "$bin" ]] && return 1
+  xattr -d com.apple.quarantine "$bin" >/dev/null 2>&1 || true
+  local target
+  target="$(readlink "$bin" 2>/dev/null || true)"
+  [[ -n "$target" ]] && xattr -d com.apple.quarantine "$target" >/dev/null 2>&1 || true
+  return 0
+}
+
+clickhouse_running() {
+  if command -v curl >/dev/null 2>&1; then
+    local ping_url
+    ping_url="$(clickhouse_http_url)/ping"
+    [[ "$(curl -fsS --max-time 0.8 "$ping_url" 2>/dev/null || true)" == "Ok." ]] && return 0
+    [[ "$(curl -fsS --max-time 0.8 --user "${CH_USER}:${CH_PASSWORD}" "$ping_url" 2>/dev/null || true)" == "Ok." ]] && return 0
+    return 1
+  else
+    return 1
+  fi
+}
+
+clickhouse_query() {
+  local sql="$1"
+  command -v curl >/dev/null 2>&1 || return 1
+  local url
+  url="$(clickhouse_http_url)/?database=${CH_DATABASE}"
+  curl -fsS --max-time 1.5 --data-binary "${sql} FORMAT TSVRaw" "$url" 2>/dev/null && return 0
+  curl -fsS --max-time 1.5 --user "${CH_USER}:${CH_PASSWORD}" --data-binary "${sql} FORMAT TSVRaw" "$url" 2>/dev/null
+}
+
+clickhouse_db_names() {
+  clickhouse_query "
+    SELECT name
+    FROM system.databases
+    WHERE name NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
+    ORDER BY name
+  "
+}
+
+clickhouse_db_rows() {
+  clickhouse_query "
+    SELECT concat(d.name, '\t', toString(count(t.name)))
+    FROM system.databases d
+    LEFT JOIN system.tables t ON d.name = t.database
+    WHERE d.name NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')
+    GROUP BY d.name
+    ORDER BY d.name
+  "
+}
+
+clickhouse_start_local() {
+  clickhouse_installed || die "clickhouse not installed. Install via: ohmydb setup"
+  clickhouse_unquarantine || true
+
+  if clickhouse_running; then
+    return 0
+  fi
+
+  mkdir -p "$CH_DATA_DIR" "$(dirname "$CH_PID_FILE")" "$(dirname "$CH_LOG_FILE")"
+
+  # Start self-contained local ClickHouse server with isolated data dir.
+  clickhouse server --daemon -- \
+    --path="$CH_DATA_DIR" \
+    --http_port="$CH_HTTP_PORT" \
+    --tcp_port="$CH_PORT" \
+    --listen_host="$CH_HOST" \
+    --logger.console=0 \
+    --logger.log="$CH_LOG_FILE" \
+    --logger.errorlog="$CH_ERROR_LOG_FILE" \
+    --pidfile="$CH_PID_FILE" >/dev/null 2>&1 || return 1
+
+  local i
+  for i in {1..20}; do
+    clickhouse_running && return 0
+    sleep 0.2
+  done
+
+  warn "ClickHouse started but health endpoint not responding yet"
+  return 0
 }
 
 minio_url() {
@@ -171,56 +301,113 @@ pg_db_rows() {
   " postgres 2>/dev/null
 }
 
-choose_db_interactive() {
-  local prompt="${1:-Select database}"
+choose_tsv_row_interactive() {
+  local prompt="$1"
+  local header="$2"
+  local with_nth="$3"
+  shift 3
+  local -a rows=("$@")
 
-  local -a rows=()
-  local line
-  while IFS= read -r line; do
-    [[ -n "$line" ]] && rows+=("$line")
-  done < <(pg_db_rows)
-
-  ((${#rows[@]} > 0)) || die "No databases found"
+  ((${#rows[@]} > 0)) || die "No options found"
 
   if [[ "$NO_INPUT" -eq 1 ]]; then
-    die "--no-input: database name required"
+    die "--no-input: explicit selection required"
   fi
   if ! [[ -t 0 ]]; then
-    die "Database name required in non-interactive mode"
+    die "Selection required in non-interactive mode"
   fi
 
   if command -v fzf >/dev/null 2>&1; then
     local selected
     selected="$(
       printf '%s\n' "${rows[@]}" |
-        fzf --prompt="${prompt}> " --height=40% --reverse --delimiter=$'\t' --with-nth=1,2,3
+        fzf --prompt="${prompt}> " --height=40% --reverse --delimiter=$'\t' --with-nth="$with_nth"
     )" || return 1
-    printf '%s\n' "${selected%%$'\t'*}"
+    printf '%s\n' "$selected"
     return 0
   fi
 
   printf '%s\n' "$(bold "$prompt:")" >&2
+  [[ -n "$header" ]] && printf '%s\n' "$header" >&2
   local i
-  printf '  %-20s %-10s %s\n' "NAME" "SIZE" "CONNS" >&2
   for i in "${!rows[@]}"; do
-    local name size conns
-    IFS=$'\t' read -r name size conns <<<"${rows[$i]}"
-    printf '  %2d) %-20s %-10s %s\n' "$((i + 1))" "$name" "$size" "$conns" >&2
+    printf '  %2d) %s\n' "$((i + 1))" "$(echo "${rows[$i]}" | tr '\t' ' ')" >&2
   done
-  printf 'Enter name or number (blank to cancel): ' >&2
+  printf 'Enter number (blank to cancel): ' >&2
 
   local reply
   read -r reply
   [[ -z "$reply" ]] && exit 0
+  [[ "$reply" =~ ^[0-9]+$ ]] || die "Please enter a number"
 
-  if [[ "$reply" =~ ^[0-9]+$ ]]; then
-    local idx=$((reply - 1))
-    (( idx >= 0 && idx < ${#rows[@]} )) || die "Invalid selection"
-    printf '%s\n' "${rows[$idx]%%$'\t'*}"
-    return 0
-  fi
+  local idx=$((reply - 1))
+  (( idx >= 0 && idx < ${#rows[@]} )) || die "Invalid selection"
+  printf '%s\n' "${rows[$idx]}"
+}
 
-  printf '%s\n' "$reply"
+choose_open_provider_interactive() {
+  local pg_state ch_state
+  pg_state="$(pg_running && echo running || echo stopped)"
+  ch_state="$(clickhouse_running && echo running || echo stopped)"
+
+  local -a rows=(
+    "$(printf 'postgres\tPostgreSQL\t%s' "$pg_state")"
+    "$(printf 'clickhouse\tClickHouse\t%s' "$ch_state")"
+  )
+
+  local selected
+  selected="$(choose_tsv_row_interactive "ohmydb open" "  PROVIDER     ENGINE       STATUS" "1,2,3" "${rows[@]}")" || return 1
+  local provider="${selected%%$'\t'*}"
+  # Backstop for malformed rows that may contain literal '\t' sequences.
+  provider="${provider%%\\t*}"
+  printf '%s\n' "$provider"
+}
+
+provider_db_rows() {
+  local provider="$1"
+  case "$provider" in
+    postgres)
+      pg_db_rows
+      ;;
+    clickhouse)
+      clickhouse_db_rows
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+choose_provider_db_interactive() {
+  local provider="$1"
+  local prompt header with_nth
+  case "$provider" in
+    postgres)
+      prompt="ohmydb open: postgres"
+      header="  NAME                 SIZE       CONNS"
+      with_nth="1,2,3"
+      ;;
+    clickhouse)
+      prompt="ohmydb open: clickhouse"
+      header="  NAME                 TABLES"
+      with_nth="1,2"
+      ;;
+    *)
+      die "Unknown provider: $provider"
+      ;;
+  esac
+
+  local -a rows=()
+  local line
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && rows+=("$line")
+  done < <(provider_db_rows "$provider")
+
+  ((${#rows[@]} > 0)) || die "No databases found for provider \"$provider\""
+
+  local selected
+  selected="$(choose_tsv_row_interactive "$prompt" "$header" "$with_nth" "${rows[@]}")" || return 1
+  printf '%s\n' "${selected%%$'\t'*}"
 }
 
 confirm() {
@@ -243,27 +430,28 @@ confirm() {
 # --- Usage ---
 usage() {
   cat <<'EOF'
-ohmydb — Manage local PostgreSQL databases, Redis, and MinIO for multi-project development.
+ohmydb — Manage local PostgreSQL databases, Redis, ClickHouse, and MinIO for multi-project development.
 
 Usage:
   ohmydb <command> [name] [flags]
-  ohmydb                       Show PG databases + Redis + MinIO buckets (= ohmydb list)
+  ohmydb                       Show PG databases + Redis + ClickHouse + MinIO buckets (= ohmydb list)
   ohmydb <command> -h          Help for command
 
 Commands:
   create, c, new    Create database, print connection info
   drop, rm          Drop database
-  list, ls          List PG databases + Redis + MinIO
+  list, ls          List PG databases + Redis + ClickHouse + MinIO
   url, u            Print DATABASE_URL (pipe-friendly)
   env, e            Print .env block
   clone, cp         Clone database via createdb -T
   reset             Drop + recreate database
   redis, r          Redis connection info + ping + memory
+  clickhouse, ch    ClickHouse connection info + database list
   minio, m          MinIO connection info + bucket list
-  info, i           PG + Redis + MinIO status overview
-  open, o           Open in TablePlus (pick db if omitted; use: ohmydb open --app)
+  info, i           PG + Redis + ClickHouse + MinIO status overview
+  open, o           Open GUI (interactive provider/db picker; Postgres/ClickHouse in TablePlus)
   psql, sh          Open psql/pgcli shell
-  setup             Install/start PG + Redis via brew + start MinIO
+  setup             Install/start PG + Redis + ClickHouse via brew + start MinIO
 
 Flags:
   -h, --help        Show help
@@ -321,9 +509,9 @@ cmd_drop() {
 cmd_list() {
   if [[ "$JSON" -eq 1 ]]; then
     # Combined JSON contract (stable-ish):
-    # { postgres: { running, host, port, user, databases: [...] }, redis: {...}, minio: {...} }
-    local pg_running_json redis_running_json minio_running_json
-    local pg_dbs_json redis_mem redis_keys minio_buckets_json
+    # { postgres: {...}, redis: {...}, clickhouse: {...}, minio: {...} }
+    local pg_running_json redis_running_json clickhouse_running_json minio_running_json
+    local pg_dbs_json redis_mem redis_keys clickhouse_dbs_json clickhouse_version minio_buckets_json
 
     if pg_running; then
       pg_running_json=true
@@ -353,6 +541,27 @@ cmd_list() {
       redis_keys=""
     fi
 
+    if clickhouse_running; then
+      clickhouse_running_json=true
+      if clickhouse_dbs="$(clickhouse_db_names 2>/dev/null)"; then
+        clickhouse_dbs_json="$(printf '%s\n' "$clickhouse_dbs" | awk '
+          BEGIN { printf "["; n = 0 }
+          NF {
+            gsub(/"/, "\\\"", $0)
+            printf "%s\"%s\"", (n++ ? "," : ""), $0
+          }
+          END { printf "]" }
+        ')"
+      else
+        clickhouse_dbs_json="[]"
+      fi
+      clickhouse_version="$(clickhouse_query "SELECT version()" 2>/dev/null | head -n1 || true)"
+    else
+      clickhouse_running_json=false
+      clickhouse_dbs_json="[]"
+      clickhouse_version=""
+    fi
+
     if minio_running; then
       minio_running_json=true
       if buckets="$(minio_bucket_names 2>/dev/null)"; then
@@ -371,6 +580,8 @@ cmd_list() {
       "$pg_running_json" "$PG_HOST" "$PG_PORT" "$PG_USER" "$pg_dbs_json"
     printf '"redis":{"running":%s,"host":"%s","port":%s,"memory":"%s","keys":"%s"},' \
       "$redis_running_json" "$REDIS_HOST" "$REDIS_PORT" "$redis_mem" "$redis_keys"
+    printf '"clickhouse":{"running":%s,"host":"%s","port":%s,"http_port":%s,"user":"%s","version":"%s","databases":%s},' \
+      "$clickhouse_running_json" "$CH_HOST" "$CH_PORT" "$CH_HTTP_PORT" "$CH_USER" "$clickhouse_version" "$clickhouse_dbs_json"
     printf '"minio":{"running":%s,"url":"%s","console_url":"%s","buckets":%s}' \
       "$minio_running_json" "$(minio_url)" "$(minio_console_url)" "$minio_buckets_json"
     printf '}\n'
@@ -413,6 +624,31 @@ cmd_list_plain() {
     printf 'Keys:   %s\n' "${keys:-0}"
   else
     printf '%s\n' "$(red 'Redis stopped')"
+    printf '  %s\n' "$(dim 'Run: ohmydb setup')"
+  fi
+
+  echo ""
+
+  # ClickHouse
+  printf '%s\n' "$(bold "ClickHouse")"
+  if clickhouse_running; then
+    printf 'Host:      %s:%s\n' "$CH_HOST" "$CH_PORT"
+    printf 'HTTP:      %s\n' "$(clickhouse_http_url)"
+    printf 'Native:    %s\n' "$(clickhouse_native_url)"
+    local ch_dbs
+    if ch_dbs="$(clickhouse_db_names 2>/dev/null)"; then
+      if [[ -z "$ch_dbs" ]]; then
+        printf 'Databases: (none)\n'
+      else
+        printf 'Databases:\n'
+        print_prefixed_lines "  " "$ch_dbs"
+      fi
+    else
+      printf '%s\n' "$(red 'Unable to list databases (check credentials)')"
+      printf '  %s\n' "$(dim 'Env: OHMYDB_CH_USER / OHMYDB_CH_PASSWORD / OHMYDB_CH_DATABASE')"
+    fi
+  else
+    printf '%s\n' "$(red 'ClickHouse stopped')"
     printf '  %s\n' "$(dim 'Run: ohmydb setup')"
   fi
 
@@ -463,6 +699,14 @@ cmd_env() {
   echo "PGUSER=${PG_USER}"
   echo "PGDATABASE=${name}"
   echo "REDIS_URL=redis://${REDIS_HOST}:${REDIS_PORT}"
+  echo "CLICKHOUSE_HOST=${CH_HOST}"
+  echo "CLICKHOUSE_PORT=${CH_PORT}"
+  echo "CLICKHOUSE_HTTP_PORT=${CH_HTTP_PORT}"
+  echo "CLICKHOUSE_USER=${CH_USER}"
+  echo "CLICKHOUSE_PASSWORD=(set via OHMYDB_CH_PASSWORD)"
+  echo "CLICKHOUSE_DATABASE=${CH_DATABASE}"
+  echo "CLICKHOUSE_HTTP_URL=$(clickhouse_http_url)"
+  echo "CLICKHOUSE_NATIVE_URL=$(clickhouse_native_url)"
   echo "MINIO_URL=$(minio_url)"
   echo "MINIO_CONSOLE_URL=$(minio_console_url)"
   echo "MINIO_ROOT_USER=${MINIO_ROOT_USER}"
@@ -515,6 +759,35 @@ cmd_redis() {
   echo ""
   echo "Memory: ${mem:-unknown}"
   echo "Keys:   ${keys:-0}"
+}
+
+cmd_clickhouse() {
+  if ! clickhouse_running; then
+    die "ClickHouse is not running on $(clickhouse_http_url) (try: ohmydb setup)"
+  fi
+
+  info "ClickHouse running"
+  echo ""
+  echo "CLICKHOUSE_HTTP_URL=$(clickhouse_http_url)"
+  echo "CLICKHOUSE_NATIVE_URL=$(clickhouse_native_url)"
+  echo "CLICKHOUSE_USER=${CH_USER}"
+  echo "CLICKHOUSE_PASSWORD=(set via OHMYDB_CH_PASSWORD)"
+  echo "CLICKHOUSE_DATABASE=${CH_DATABASE}"
+
+  echo ""
+
+  local dbs
+  if dbs="$(clickhouse_db_names 2>/dev/null)"; then
+    if [[ -z "$dbs" ]]; then
+      echo "Databases: (none)"
+      return 0
+    fi
+    echo "Databases:"
+    print_prefixed_lines "  " "$dbs"
+  else
+    warn "Unable to list databases (check credentials)"
+    printf '%s\n' "$(dim 'Env: OHMYDB_CH_USER / OHMYDB_CH_PASSWORD / OHMYDB_CH_DATABASE')" >&2
+  fi
 }
 
 cmd_minio() {
@@ -595,6 +868,27 @@ cmd_info() {
 
   echo "" >&2
 
+  # ClickHouse
+  if clickhouse_running; then
+    local ch_version
+    ch_version="$(clickhouse_query "SELECT version()" 2>/dev/null | head -n1 || true)"
+    printf '%s\n' "$(green "ClickHouse ${ch_version:-?} ✓ running")" >&2
+    printf '  Host:      %s:%s\n' "$CH_HOST" "$CH_PORT" >&2
+    printf '  HTTP:      %s\n' "$(clickhouse_http_url)" >&2
+    local ch_db_count
+    if ch_db_count="$(clickhouse_db_names 2>/dev/null | wc -l | tr -d '[:space:]')"; then
+      [[ -z "$ch_db_count" ]] && ch_db_count="0"
+    else
+      ch_db_count="?"
+    fi
+    printf '  Databases: %s\n' "$ch_db_count" >&2
+  else
+    printf '%s\n' "$(red 'ClickHouse ✗ stopped')" >&2
+    printf '  %s\n' "$(dim 'Run: ohmydb setup')" >&2
+  fi
+
+  echo "" >&2
+
   # MinIO
   if minio_running; then
     printf '%s\n' "$(green "MinIO ✓ running")" >&2
@@ -618,29 +912,69 @@ cmd_info() {
 }
 
 cmd_open() {
-  local name="${1:-}"
+  local name=""
+  local target="auto"
+
+  while (($# > 0)); do
+    case "$1" in
+      --clickhouse|--ch|clickhouse|ch)
+        target="clickhouse"
+        ;;
+      --postgres|--pg|postgres|pg)
+        target="postgres"
+        ;;
+      --app)
+        target="app"
+        ;;
+      *)
+        if [[ -z "$name" ]]; then
+          name="$1"
+        else
+          die "Unexpected argument for open: $1"
+        fi
+        ;;
+    esac
+    shift
+  done
 
   # Subcommand-only flag: keep quick access to the GUI without picking a DB.
-  if [[ "$name" == "--app" ]]; then
-    if [[ ! -d "/Applications/TablePlus.app" ]]; then
-      die "TablePlus not found. Install: brew install --cask tableplus"
-    fi
+  if [[ "$target" == "app" ]]; then
+    [[ -n "$name" ]] && die "--app does not accept a database name"
+    ensure_tableplus_installed
     open -a TablePlus
     return 0
   fi
 
-  if [[ ! -d "/Applications/TablePlus.app" ]]; then
-    die "TablePlus not found. Install: brew install --cask tableplus"
+  if [[ "$target" == "auto" ]]; then
+    if [[ -n "$name" ]]; then
+      # Backward compatibility: `ohmydb open <name>` still means PostgreSQL database.
+      target="postgres"
+    else
+      target="$(choose_open_provider_interactive)" || exit 0
+    fi
   fi
 
-  if [[ -n "$name" ]]; then
-    pg_running || die "PostgreSQL is not running (try: ohmydb setup)"
-    tableplus_open_pg "$name"
-  else
-    pg_running || die "PostgreSQL is not running (try: ohmydb setup)"
-    name="$(choose_db_interactive "ohmydb open")" || exit 0
-    tableplus_open_pg "$name"
-  fi
+  ensure_tableplus_installed
+
+  case "$target" in
+    postgres)
+      pg_running || die "PostgreSQL is not running (try: ohmydb setup)"
+      if [[ -z "$name" ]]; then
+        name="$(choose_provider_db_interactive postgres)" || exit 0
+      fi
+      tableplus_open_pg "$name"
+      ;;
+    clickhouse)
+      clickhouse_running || die "ClickHouse is not running on $(clickhouse_http_url) (try: ohmydb setup)"
+      if [[ -z "$name" ]]; then
+        name="$(choose_provider_db_interactive clickhouse)" || exit 0
+      fi
+      tableplus_open_clickhouse "$name"
+      ;;
+    *)
+      die "Unknown open target: $target"
+      ;;
+  esac
 }
 
 cmd_psql() {
@@ -683,6 +1017,16 @@ cmd_setup() {
     info "redis installed"
   fi
 
+  # ClickHouse (single binary via cask)
+  if brew list --cask clickhouse >/dev/null 2>&1; then
+    info "clickhouse installed"
+  else
+    printf '%s\n' "$(dim 'Installing clickhouse...')" >&2
+    brew install --cask clickhouse
+    info "clickhouse installed"
+  fi
+  clickhouse_unquarantine || true
+
   # MinIO
   if brew list minio >/dev/null 2>&1; then
     info "minio installed"
@@ -714,6 +1058,13 @@ cmd_setup() {
   else
     brew services start redis
     info "redis started"
+  fi
+
+  if clickhouse_running || clickhouse_start_local; then
+    info "clickhouse started"
+  else
+    warn "clickhouse was not started automatically"
+    printf '  %s\n' "$(dim 'Inspect logs: ~/.local/state/ohmydb/clickhouse.error.log')" >&2
   fi
 
   # MinIO: try brew service if present, otherwise start our own background process.
@@ -784,6 +1135,7 @@ case "$cmd" in
   clone|cp)       cmd_clone "$@" ;;
   reset)          cmd_reset "$@" ;;
   redis|r)        cmd_redis "$@" ;;
+  clickhouse|ch)  cmd_clickhouse "$@" ;;
   minio|m)        cmd_minio "$@" ;;
   info|i)         cmd_info "$@" ;;
   open|o)         cmd_open "$@" ;;

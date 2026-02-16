@@ -16,7 +16,7 @@ _ohmydb() {
     'new:Create database (alias)'
     'drop:Drop PostgreSQL database'
     'rm:Drop database (alias)'
-    'list:List PG databases + Redis + MinIO'
+    'list:List PG databases + Redis + ClickHouse + MinIO'
     'ls:List (alias)'
     'url:Print DATABASE_URL (pipe-friendly)'
     'u:Print DATABASE_URL (alias)'
@@ -27,15 +27,17 @@ _ohmydb() {
     'reset:Drop + recreate database'
     'redis:Redis connection info'
     'r:Redis info (alias)'
+    'clickhouse:ClickHouse connection info + database list'
+    'ch:ClickHouse info (alias)'
     'minio:MinIO connection info + bucket list'
     'm:MinIO info (alias)'
-    'info:PG + Redis + MinIO status overview'
+    'info:PG + Redis + ClickHouse + MinIO status overview'
     'i:Status overview (alias)'
-    'open:Open in TablePlus'
-    'o:Open in TablePlus (alias)'
+    'open:Open GUI (interactive picker for Postgres/ClickHouse in TablePlus)'
+    'o:Open GUI (alias)'
     'psql:Open psql/pgcli shell'
     'sh:Open shell (alias)'
-    'setup:Install/start PG + Redis via brew + start MinIO'
+    'setup:Install/start PG + Redis + ClickHouse via brew + start MinIO'
   )
 
   local -a flags=(
@@ -59,6 +61,14 @@ _ohmydb() {
         local -a open_args
         open_args=(
           '--app:Open TablePlus app (no DB selection)'
+          '--postgres:Open PostgreSQL DB picker in TablePlus'
+          '--pg:Open PostgreSQL DB picker in TablePlus'
+          '--clickhouse:Open ClickHouse DB picker in TablePlus'
+          '--ch:Open ClickHouse DB picker in TablePlus'
+          'postgres:Open PostgreSQL DB picker in TablePlus'
+          'pg:Open PostgreSQL DB picker in TablePlus'
+          'clickhouse:Open ClickHouse DB picker in TablePlus'
+          'ch:Open ClickHouse DB picker in TablePlus'
         )
         _describe 'open args' open_args
         _ohmydb_databases
