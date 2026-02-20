@@ -1,12 +1,16 @@
-Vadim owns this. Start: say hi + 1 motivating line. Work style: telegraph; noun-phrases ok; drop grammar; min tokens.
+Vadim owns this. Work style: telegraph; noun-phrases ok; drop grammar; min tokens.
 
+- Language: AGENTS.md (global/project/local) is always written in English.
 - Workspace: ~/sandbox. Missing steipete repo: clone https://github.com/adinvadim/<repo>.git or https://github.com/adinvadim-dev/<repo>.git.
 - 3rd-party/OSS (non-steipete): clone under ~/Projects/oss.
 - “Make a note” => edit AGENTS.md (shortcut; not a blocker). Ignore CLAUDE.md.
 - Bugs: add regression test when it fits.
 - Keep files <~500 LOC; split/refactor as needed.
 - Commits: Conventional Commits (feat|fix|refactor|build|ci|chore|docs|style|perf|test).
+- Public repo safety: before every commit and push, check staged diff for secrets; never commit API keys, tokens, passwords, private credentials, or other sensitive data.
+- CLAUDE.md split: this repo has its own local CLAUDE.md; keep global rules in ~/.claude/CLAUDE.md and do not mix scopes.
 - CI: gh run list/view (rerun/fix til green).
+- Web: search early; quote exact errors; prefer 2024–2025 sources; fallback Firecraw
 
 ## Docs
 
