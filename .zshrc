@@ -1,3 +1,6 @@
+# Private secrets (API keys, tokens) — not tracked by git.
+[[ -f ~/.secrets ]] && source ~/.secrets
+
 # If you come from bash you might have to change your $PATH.
 export PATH=$HOME/bin:$PATH
 
@@ -28,9 +31,22 @@ plugins=(git)
 
 source $ZSH/oh-my-zsh.sh
 
-fpath+=("$(brew --prefix)/share/zsh/site-functions")
-autoload -U promptinit; promptinit
-prompt pure
+# One-line prompt: disable external prompt frameworks.
+# (pure/p10k use multiline/async rendering and can amplify redraw artifacts on Ctrl+C)
+# fpath+=("$(brew --prefix)/share/zsh/site-functions")
+# autoload -U promptinit; promptinit
+# prompt pure
+
+_cmux_prompt_git_branch() {
+  local branch
+  branch="$(command git symbolic-ref --quiet --short HEAD 2>/dev/null || command git rev-parse --short HEAD 2>/dev/null)" || return
+  [[ -n "$branch" ]] || return
+  print -rn -- " %F{110}%f %F{81}${branch}%f"
+}
+setopt prompt_subst
+PROMPT='%F{75}%~%f$(_cmux_prompt_git_branch) %F{214}❯%f '
+RPROMPT=''
+RPS1=''
 
 export PATH="${HOME}/.pyenv/shims:${PATH}"
 
@@ -90,12 +106,12 @@ if [ -f '/Users/comp/yandex-cloud/path.bash.inc' ]; then source '/Users/comp/yan
 # The next line enables shell command completion for yc.
 if [ -f '/Users/comp/yandex-cloud/completion.zsh.inc' ]; then source '/Users/comp/yandex-cloud/completion.zsh.inc'; fi
 
-# Disable Powerlevel10k when Cursor Agent runs
-if [[ -n "$CURSOR_AGENT" ]]; then
-  # Skip theme initialization for better compatibility
-else
-  [[ -r ~/.p10k.zsh ]] && source ~/.p10k.zsh
-fi
+# Disable Powerlevel10k (keep strict one-line prompt).
+# if [[ -n "$CURSOR_AGENT" ]]; then
+#   # Skip theme initialization for better compatibility
+# else
+#   [[ -r ~/.p10k.zsh ]] && source ~/.p10k.zsh
+# fi
 
 tmxhq() {
   tmux has-session -t "hq" 2>/dev/null
