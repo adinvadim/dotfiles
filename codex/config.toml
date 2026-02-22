@@ -30,5 +30,5 @@ trust_level = "trusted"
 command = "npx"
 args = ["-y", "firecrawl-mcp"]
 
-# firecrawl-mcp inherits FIRECRAWL_API_KEY from shell environment.
-# Export it in ~/.secrets (not tracked):  export FIRECRAWL_API_KEY="fc-..."
+[mcp_servers.firecrawl.env]
+FIRECRAWL_API_KEY = "${FIRECRAWL_API_KEY}"

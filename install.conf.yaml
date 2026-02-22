@@ -16,7 +16,9 @@
   # Make AGENTS.md / CLAUDE.md linking idempotent (backup if a regular file already exists).
   - sh -c 'if [ -e "$HOME/.codex/AGENTS.md" ] && [ ! -L "$HOME/.codex/AGENTS.md" ]; then mv "$HOME/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.claude/CLAUDE.md" ] && [ ! -L "$HOME/.claude/CLAUDE.md" ]; then mv "$HOME/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
-  - sh -c 'if [ -e "$HOME/.codex/config.toml" ] && [ ! -L "$HOME/.codex/config.toml" ]; then mv "$HOME/.codex/config.toml" "$HOME/.codex/config.toml.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  # Generate ~/.codex/config.toml from template, substituting secrets.
+  # Remove stale symlink first, then sed via temp file to avoid truncating the source.
+  - sh -c 'rm -f "$HOME/.codex/config.toml"; . "$HOME/.secrets" 2>/dev/null; t=$(mktemp) && sed "s|\${FIRECRAWL_API_KEY}|${FIRECRAWL_API_KEY:-}|g" "$PWD/codex/config.toml" > "$t" && mv "$t" "$HOME/.codex/config.toml"'
 
 - link:
     ~/.tmux.conf: .tmux.conf
@@ -41,7 +43,6 @@
     /opt/homebrew/share/zsh/site-functions/_ohmydb: bin/_ohmydb
     ~/.editorconfig: .editorconfig
     ~/.codex/AGENTS.md: AGENTS.md
-    ~/.codex/config.toml: codex/config.toml
     ~/.claude/CLAUDE.md: CLAUDE.md
     ~/.config/kitty: kitty
     ~/.config/coc/ultisnips: ultisnips
