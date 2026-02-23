@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -u
+
+payload="${1:-{}}"
+msg="Turn complete"
+
+if command -v jq >/dev/null 2>&1; then
+  parsed="$(printf '%s' "$payload" | jq -r '."last-assistant-message" // empty' 2>/dev/null || true)"
+  if [ -n "${parsed:-}" ]; then
+    msg="$parsed"
+  fi
+fi
+
+msg="$(printf '%s' "$msg" | tr '\n\r' '  ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//' | cut -c1-160)"
+if [ -z "$msg" ]; then
+  msg="Turn complete"
+fi
+
+if command -v cmux >/dev/null 2>&1 && cmux ping >/dev/null 2>&1; then
+  cmux notify --title "Codex" --body "$msg" >/dev/null 2>&1 || true
+  cmux set-status codex "Needs input" --icon terminal.fill --color "#4C8DFF" >/dev/null 2>&1 || true
+  exit 0
+fi
+
+safe_msg="${msg//\\/\\\\}"
+safe_msg="${safe_msg//\"/\\\"}"
+osascript -e "display notification \"$safe_msg\" with title \"Codex\"" >/dev/null 2>&1 || true

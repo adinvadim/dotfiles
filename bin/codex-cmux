@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -u
+
+if command -v cmux >/dev/null 2>&1 && cmux ping >/dev/null 2>&1; then
+  cmux set-status codex "Running" --icon bolt.fill --color "#4C8DFF" >/dev/null 2>&1 || true
+fi
+
+command codex "$@"
+rc=$?
+
+if command -v cmux >/dev/null 2>&1 && cmux ping >/dev/null 2>&1; then
+  cmux clear-status codex >/dev/null 2>&1 || true
+fi
+
+exit "$rc"

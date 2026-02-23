@@ -16,6 +16,7 @@
   # Make AGENTS.md / CLAUDE.md linking idempotent (backup if a regular file already exists).
   - sh -c 'if [ -e "$HOME/.codex/AGENTS.md" ] && [ ! -L "$HOME/.codex/AGENTS.md" ]; then mv "$HOME/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.claude/CLAUDE.md" ] && [ ! -L "$HOME/.claude/CLAUDE.md" ]; then mv "$HOME/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.claude/settings.json" ] && [ ! -L "$HOME/.claude/settings.json" ]; then mv "$HOME/.claude/settings.json" "$HOME/.claude/settings.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
   # Generate ~/.codex/config.toml from template, substituting secrets.
   # Remove stale symlink first, then sed via temp file to avoid truncating the source.
   - sh -c 'rm -f "$HOME/.codex/config.toml"; . "$HOME/.secrets" 2>/dev/null; t=$(mktemp) && sed "s|\${FIRECRAWL_API_KEY}|${FIRECRAWL_API_KEY:-}|g" "$PWD/codex/config.toml" > "$t" && mv "$t" "$HOME/.codex/config.toml"'
@@ -35,6 +36,8 @@
     ~/bin/tmux-gh-pr-open: bin/tmux-gh-pr-open
     ~/bin/tmux-ai-status: bin/tmux-ai-status
     ~/bin/tmux-subscript: bin/tmux-subscript
+    ~/bin/codex-notify: bin/codex-notify
+    ~/bin/codex-cmux: bin/codex-cmux
     ~/bin/db: bin/db
     ~/bin/ohmydb: bin/ohmydb
     ~/bin/setup-firecrawl-mcp: bin/setup-firecrawl-mcp
@@ -44,6 +47,7 @@
     ~/.editorconfig: .editorconfig
     ~/.codex/AGENTS.md: AGENTS.md
     ~/.claude/CLAUDE.md: CLAUDE.md
+    ~/.claude/settings.json: claude/settings.json
     ~/.config/kitty: kitty
     ~/.config/coc/ultisnips: ultisnips
     ~/safari-global.css: safari/global.css
