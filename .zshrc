@@ -66,6 +66,28 @@ lg() {
 }
 
 
+# Open PR in browser for current branch, or show message if none
+pr() {
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "Not a git repository"; return 1
+  fi
+  local branch
+  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  if [[ -z "$branch" || "$branch" == "HEAD" ]]; then
+    echo "Not on a branch (detached HEAD)"; return 1
+  fi
+  local repo
+  repo="$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")"
+  local url
+  url="$(gh pr view --json url --template '{{.url}}' 2>/dev/null)" || true
+  if [[ -z "$url" ]]; then
+    echo "No PR for repo '$repo' on branch '$branch'"
+    return 1
+  fi
+  echo "Opening $url"
+  open "$url"
+}
+
 tmuxbu() {
   # Check if the session exists, discarding output
   # We can check $? for the exit status (zero for success, non-zero for failure)
