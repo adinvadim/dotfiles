@@ -23,3 +23,17 @@ When the user asks to study, understand, scout, audit, or onboard into a project
 6. If `subagent` is unavailable, do the same workflow yourself: `docs-list` first, then code scan.
 
 For docs work, prefer authoritative project docs over guessing. Read the specific docs you cite.
+
+## Git workflow
+
+For commit operations, prefer slash commands over ad-hoc shell commands:
+- `/commit`
+- `/commit-push`
+- `/commit-push-pr`
+
+Always use Conventional Commits format:
+- `feat(scope): subject`
+- `fix(scope): subject`
+- `chore: subject`
+
+After a successful commit via these commands, reset session added/removed line counters in the status footer.
