@@ -179,25 +179,20 @@ let mapleader = ","
 "
 " 'folke/which-key.nvim' {{{
 lua << EOF
-local wk = require("which-key")
-
-wk.setup()
-wk.register({
-  ["<leader>"] = {
-    f = {
-      name = "+file",
-    },
-    b = {
-      name = "+buffer",
-      d = "Delete buffer",
-      n = "Next buffer",
-      p = "Prev buffer",
-      i = "Toggle pin",
-      g = "Pick buffer"
-    }
-  },
-  ["<leader>cheat"] = { name = "Show cheatsheet"}
-})
+local ok, wk = pcall(require, "which-key")
+if ok then
+  wk.setup()
+  wk.add({
+    { "<leader>f", group = "file" },
+    { "<leader>b", group = "buffer", desc = "Buffer" },
+    { "<leader>bd", desc = "Delete buffer" },
+    { "<leader>bn", desc = "Next buffer" },
+    { "<leader>bp", desc = "Prev buffer" },
+    { "<leader>bi", desc = "Toggle pin" },
+    { "<leader>bg", desc = "Pick buffer" },
+    { "<leader>cheat", desc = "Show cheatsheet" },
+  })
+end
 EOF
 " }}
 
@@ -297,17 +292,14 @@ nnoremap <leader>cheat :Cheatsheet<cr>
 let g:dashboard_default_executive ='telescope'
 
 lua << EOF
-local wk = require("which-key")
-
-wk.register({
-  ["<leader>"] = {
-    s = {
-      name = "+session",
-      s = { "<cmd>SessionSave<cr>", "Save session" },
-      l = { "<cmd>SessionLoad<cr>", "Load session" },
-    }
-  },
-})
+local ok, wk = pcall(require, "which-key")
+if ok then
+  wk.add({
+    { "<leader>s", group = "session" },
+    { "<leader>ss", "<cmd>SessionSave<cr>", desc = "Save session" },
+    { "<leader>sl", "<cmd>SessionLoad<cr>", desc = "Load session" },
+  })
+end
 EOF
 nnoremap <silent> <Leader>fh :DashboardFindHistory<CR>
 nnoremap <silent> <Leader>ct :DashboardChangeColorscheme<CR>
@@ -821,20 +813,17 @@ nnoremap <leader>ts :call <SID>RunVimTest('TestSuite')<cr>
 nnoremap <leader>tv :call <SID>RunVimTest('TestVisit')<cr>
 
 lua << EOF
-local wk = require("which-key")
-
-wk.register({
-  ["<leader>"] = {
-    t = {
-      name = "+test",
-      t = "Test nearest",
-      l = "Test last",
-      f = "Test file",
-      s = "Test suite",
-      v = "Test visit",
-    },
-  },
-})
+local ok, wk = pcall(require, "which-key")
+if ok then
+  wk.add({
+    { "<leader>t", group = "test" },
+    { "<leader>tt", desc = "Test nearest" },
+    { "<leader>tl", desc = "Test last" },
+    { "<leader>tf", desc = "Test file" },
+    { "<leader>ts", desc = "Test suite" },
+    { "<leader>tv", desc = "Test visit" },
+  })
+end
 EOF
 " }}}
 "
