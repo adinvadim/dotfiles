@@ -7,6 +7,9 @@
 - create:
     - ~/.config
     - ~/.config/coc
+    - ~/.pi/agent
+    - ~/.pi/agent/agents
+    - ~/.pi/agent/extensions
     - ~/.agents/skills
     - ~/.codex/skills
     - ~/.claude/skills
@@ -17,9 +20,14 @@
   - sh -c 'if [ -e "$HOME/.codex/AGENTS.md" ] && [ ! -L "$HOME/.codex/AGENTS.md" ]; then mv "$HOME/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.claude/CLAUDE.md" ] && [ ! -L "$HOME/.claude/CLAUDE.md" ]; then mv "$HOME/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.claude/settings.json" ] && [ ! -L "$HOME/.claude/settings.json" ]; then mv "$HOME/.claude/settings.json" "$HOME/.claude/settings.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
-  # Generate ~/.codex/config.toml from template, substituting secrets.
-  # Remove stale symlink first, then sed via temp file to avoid truncating the source.
-  - sh -c 'rm -f "$HOME/.codex/config.toml"; . "$HOME/.secrets" 2>/dev/null; t=$(mktemp) && sed "s|\${FIRECRAWL_API_KEY}|${FIRECRAWL_API_KEY:-}|g" "$PWD/codex/config.toml" > "$t" && mv "$t" "$HOME/.codex/config.toml"'
+  - sh -c 'if [ -e "$HOME/.pi/agent/AGENTS.md" ] && [ ! -L "$HOME/.pi/agent/AGENTS.md" ]; then mv "$HOME/.pi/agent/AGENTS.md" "$HOME/.pi/agent/AGENTS.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.pi/agent/agents/scout.md" ] && [ ! -L "$HOME/.pi/agent/agents/scout.md" ]; then mv "$HOME/.pi/agent/agents/scout.md" "$HOME/.pi/agent/agents/scout.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.pi/agent/agents/docs-scout.md" ] && [ ! -L "$HOME/.pi/agent/agents/docs-scout.md" ]; then mv "$HOME/.pi/agent/agents/docs-scout.md" "$HOME/.pi/agent/agents/docs-scout.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.pi/agent/settings.json" ] && [ ! -L "$HOME/.pi/agent/settings.json" ]; then mv "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.pi/agent/extensions/status-footer.ts" ] && [ ! -L "$HOME/.pi/agent/extensions/status-footer.ts" ]; then mv "$HOME/.pi/agent/extensions/status-footer.ts" "$HOME/.pi/agent/extensions/status-footer.ts.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  # Copy ~/.codex/config.toml as-is.
+  # Remove stale symlink first, then replace atomically via temp file.
+  - sh -c 'rm -f "$HOME/.codex/config.toml"; t=$(mktemp) && cp "$PWD/codex/config.toml" "$t" && mv "$t" "$HOME/.codex/config.toml"'
 
 - link:
     ~/.tmux.conf: .tmux.conf
@@ -36,11 +44,8 @@
     ~/bin/tmux-gh-pr-open: bin/tmux-gh-pr-open
     ~/bin/tmux-ai-status: bin/tmux-ai-status
     ~/bin/tmux-subscript: bin/tmux-subscript
-    ~/bin/codex-notify: bin/codex-notify
-    ~/bin/codex-cmux: bin/codex-cmux
     ~/bin/db: bin/db
     ~/bin/ohmydb: bin/ohmydb
-    ~/bin/setup-firecrawl-mcp: bin/setup-firecrawl-mcp
     ~/bin/docs-list: bin/docs-list
     /opt/homebrew/share/zsh/site-functions/_db: bin/_db
     /opt/homebrew/share/zsh/site-functions/_ohmydb: bin/_ohmydb
@@ -50,6 +55,11 @@
     ~/.claude/settings.json: claude/settings.json
     ~/.config/kitty: kitty
     ~/.config/coc/ultisnips: ultisnips
+    ~/.pi/agent/AGENTS.md: pi/agent/AGENTS.md
+    ~/.pi/agent/agents/scout.md: pi/agent/agents/scout.md
+    ~/.pi/agent/agents/docs-scout.md: pi/agent/agents/docs-scout.md
+    ~/.pi/agent/settings.json: pi/agent/settings.json
+    ~/.pi/agent/extensions/status-footer.ts: pi/agent/extensions/status-footer.ts
     ~/safari-global.css: safari/global.css
     ~/.agents/skills/create-cli: agents/skills/create-cli
     ~/.codex/skills/create-cli: agents/skills/create-cli
@@ -63,7 +73,8 @@
 
 - shell:
   - [git submodule update --init --recursive, Installing submodules]
-  - sh -c '"$PWD/bin/setup-firecrawl-mcp"'
+  - sh -c 'if ! npm ls -g --depth=0 @mariozechner/pi-coding-agent >/dev/null 2>&1; then npm install -g @mariozechner/pi-coding-agent; fi'
+  - sh -c 'if [ ! -x "$HOME/.bun/bin/bun" ]; then curl -fsSL https://bun.sh/install | bash; fi'
   - sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
   - sh -c 'if [ ! -d "$HOME/.oh-my-zsh" ]; then RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; fi'
   - sh -c 'if [ -f "$HOME/.zshrc.pre-oh-my-zsh" ]; then mv "$HOME/.zshrc.pre-oh-my-zsh" "$HOME/.zshrc"; fi'

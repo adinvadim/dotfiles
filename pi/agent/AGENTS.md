@@ -31,9 +31,12 @@ For commit operations, prefer slash commands over ad-hoc shell commands:
 - `/commit-push`
 - `/commit-push-pr`
 
+Before every push, run reviewer first. `/commit-push` and `/commit-push-pr` should trigger `/review` automatically before committing/pushing.
+
 Always use Conventional Commits format:
 - `feat(scope): subject`
 - `fix(scope): subject`
 - `chore: subject`
 
 After a successful commit via these commands, reset session added/removed line counters in the status footer.
+Never push without a review pass first.

@@ -1,0 +1,22 @@
+{
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.4",
+  "defaultThinkingLevel": "medium",
+  "enabledModels": [
+    "openai-codex/gpt-5.4",
+    "openai-codex/gpt-5.4-mini",
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-opus-4-6",
+    "anthropic/claude-haiku-4-5",
+    "google/gemini-3.1-pro-preview",
+    "google/gemini-3.1-flash-lite-preview"
+  ],
+  "packages": [
+    "npm:pi-prompt-template-model",
+    "npm:pi-subagents"
+  ],
+  "pi-codex-fast": {
+    "enabled": true
+  },
+  "lastChangelogVersion": "0.62.0"
+}

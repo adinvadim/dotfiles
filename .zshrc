@@ -13,8 +13,7 @@ export PATH="$N_PREFIX/bin:$PATH"
 export CLAUDE_CODE_DISABLE_COAUTHORSHIP=1
 
 alias cc="claude --dangerously-skip-permissions"
-alias codex="codex-cmux"
-alias cx="codex-cmux --yolo --no-alt-screen"
+alias cx="codex --yolo --no-alt-screen"
 
 # Claude Code with Ollama (local models)
 olcc() {
@@ -213,3 +212,7 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 export PATH=/Users/comp/.opencode/bin:$PATH
 
 . "$HOME/.local/bin/env"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"

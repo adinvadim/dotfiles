@@ -81,7 +81,7 @@ set lazyredraw
 
 " Plugins
 
-call plug#begin('~/.local/share/nvim/site/autoload')
+call plug#begin('~/.local/share/nvim/plugged')
 
 " Dashboard
 
@@ -252,13 +252,15 @@ require('telescope').setup {
     }
   },
 }
-require('telescope').load_extension('fzf')
-require("telescope").load_extension "file_browser"
-require("telescope").load_extension('harpoon')
-require('telescope').load_extension('env')
-
-require("telescope").load_extension "ui-select"
-require("telescope").load_extension "notify"
+local telescope_ok, telescope = pcall(require, 'telescope')
+if telescope_ok then
+  pcall(function() telescope.load_extension('fzf') end)
+  pcall(function() telescope.load_extension('file_browser') end)
+  pcall(function() telescope.load_extension('harpoon') end)
+  pcall(function() telescope.load_extension('env') end)
+  pcall(function() telescope.load_extension('ui-select') end)
+  pcall(function() telescope.load_extension('notify') end)
+end
 EOF
 
 
@@ -526,20 +528,45 @@ set colorcolumn=+1
 set colorcolumn=80
 
 
-colorscheme github_light_colorblind
-
-" colorscheme onebuddy
-"
-
+" Auto-detect macOS dark/light mode and apply matching colorscheme {{{
 lua << EOF
---require('github-theme').setup({
---  theme_style = "dark_default", -- dark/dark_default/dimmed/light/light_default
---  function_style = "italic",
---  sidebars = {"qf", "vista_kind", "terminal", "packer"},
---  -- Change the "hint" color to the "orange" color, and make the "error" color bright red
---  colors = {hint = "orange", error = "#ff0000"}
---})
+local function get_system_appearance()
+  local handle = io.popen("defaults read -g AppleInterfaceStyle 2>/dev/null")
+  if handle then
+    local result = handle:read("*a")
+    handle:close()
+    if result and result:find("Dark") then
+      return "dark"
+    end
+  end
+  return "light"
+end
+
+local function apply_colorscheme()
+  local appearance = get_system_appearance()
+  if appearance == "dark" then
+    vim.cmd("colorscheme nightfly")
+    vim.o.background = "dark"
+  else
+    vim.cmd("colorscheme github_light_colorblind")
+    vim.o.background = "light"
+  end
+end
+
+-- Apply on startup
+apply_colorscheme()
+
+-- Watch for system appearance changes (macOS 10.14+)
+vim.loop.new_timer():start(3000, 3000, vim.schedule_wrap(function()
+  local new_bg = get_system_appearance()
+  if new_bg ~= vim.g.system_appearance then
+    vim.g.system_appearance = new_bg
+    apply_colorscheme()
+  end
+end))
+vim.g.system_appearance = get_system_appearance()
 EOF
+" }}}
 
 "highlight Cursor guifg=#f00 guibg=#657b83
 highlight Comment cterm=italic gui=italic
@@ -841,6 +868,10 @@ if ok then
       provider = "none",  -- No terminal in nvim, use external Claude Code
     },
   })
+else
+  -- Define no-op commands so keymaps don't error
+  vim.api.nvim_create_user_command('ClaudeCodeSend', function() print("claudecode.nvim not installed") end, {})
+  vim.api.nvim_create_user_command('ClaudeCodeTreeAdd', function() print("claudecode.nvim not installed") end, {})
 end
 EOF
 nnoremap <leader>cs :ClaudeCodeSend<CR>
@@ -896,11 +927,15 @@ vim.o.foldlevelstart = 99
 vim.o.foldenable = true
 
 -- Using ufo provider need remap `zR` and `zM`. If Neovim is 0.6.1, remap yourself
-vim.keymap.set('n', 'zR', require('ufo').openAllFolds)
-vim.keymap.set('n', 'zM', require('ufo').closeAllFolds)
-
--- Option 1: coc.nvim as LSP client
-require('ufo').setup()
+local ufo_ok, ufo = pcall(require, 'ufo')
+if ufo_ok then
+  vim.keymap.set('n', 'zR', ufo.openAllFolds)
+  vim.keymap.set('n', 'zM', ufo.closeAllFolds)
+  ufo.setup()
+else
+  vim.keymap.set('n', 'zR', 'zr')
+  vim.keymap.set('n', 'zM', 'zm')
+end
 EOF
 
 " }}}
@@ -908,7 +943,10 @@ EOF
 " 'nvim-pack/nvim-spectre' {{{
 
 lua << EOF
-require('spectre').setup({ is_block_ui_break = true })
+local spectre_ok, spectre = pcall(require, 'spectre')
+if spectre_ok then
+  spectre.setup({ is_block_ui_break = true })
+end
 
 vim.keymap.set('n', '<leader>S', '<cmd>lua require("spectre").toggle()<CR>', {
     desc = "Toggle Spectre"

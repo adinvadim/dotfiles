@@ -10,14 +10,25 @@ Vadim owns this. Work style: telegraph; noun-phrases ok; drop grammar; min token
 - Public repo safety: before every commit and push, check staged diff for secrets; never commit API keys, tokens, passwords, private credentials, or other sensitive data.
 - CLAUDE.md split: this repo has its own local CLAUDE.md; keep global rules in ~/.claude/CLAUDE.md and do not mix scopes.
 - CI: gh run list/view (rerun/fix til green).
-- Web: search early; quote exact errors; prefer 2024–2025 sources; fallback Firecraw
+- Web: search early; quote exact errors; prefer 2024–2025 sources; fallback `$firecrawl` skill / Firecrawl CLI.
+- MCP: disabled by default for Codex/Claude; no auto-enable scripts.
 
 ## Docs
 
 - Start: run docs-list (ignore if not installed); open docs before coding.
-- Follow links until domain makes sense; honor Read when hints.
+- Follow links until domain makes sense; honor read_when hints.
 - Keep notes short; update docs when behavior/API changes (no ship w/o docs).
-- Add read_when hints on cross-cutting docs.
+- Add `read_when` as YAML front matter at the top of cross-cutting docs — never inline in body text.
+  Format (between `---` fences at file start):
+  ```
+  ---
+  summary: "One-line description"
+  read_when: [setup, deployment]
+  ---
+  ```
+  Valid tags are free-form; docs-list CLI parses them for filtering (`docs-list --when setup`).
+
+- Never start a dev server unless the user explicitly asks.
 
 ## Build / Test
 
@@ -49,10 +60,13 @@ Vadim owns this. Work style: telegraph; noun-phrases ok; drop grammar; min token
 - Back-compat: `db` still works but just forwards to `ohmydb`.
 - `ohmydb --help` for details.
 
-### firecrawl mcp
+### $firecrawl / firecrawl CLI
 
-- Use for live crawl/scrape/extract/search tasks when web data is needed in-agent.
-- Preconfigured globally as MCP server `firecrawl` for Codex, Claude Code, and OpenCode.
+- Use `$firecrawl` skill for live crawl/scrape/extract/search tasks when web data is needed.
+- Prefer Firecrawl CLI: `firecrawl ...` or `npx firecrawl-cli ...`.
+- If CLI missing: install with `npx -y firecrawl-cli -y` or `npm install -g firecrawl-cli@1.8.0`.
+- Auth: `firecrawl login --browser`.
+- If user gives API key instead: put it in `FIRECRAWL_API_KEY`; ask which shell/profile/env file to use before writing secrets.
 
 ### docs-list
 

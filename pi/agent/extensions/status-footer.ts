@@ -219,16 +219,20 @@ function getConventionalCommitError(message: string): string | null {
   return `Commit message must follow Conventional Commits (${CONVENTIONAL_COMMIT_TYPES.join(", ")}). Example: feat(pi): add commit slash commands`;
 }
 
-async function resolveCommitMessage(rawArgs: string, ctx: ExtensionContext): Promise<string | null> {
+async function resolveCommitMessage(
+  rawArgs: string,
+  ctx: ExtensionContext,
+  commandName = "commit",
+): Promise<string | null> {
   const trimmed = rawArgs.trim();
   if (trimmed) return trimmed;
   if (!ctx.hasUI) {
-    throw new Error("Commit message required. Usage: /commit feat(scope): subject");
+    throw new Error(`Commit message required. Usage: /${commandName} feat(scope): subject`);
   }
 
-  const input = await ctx.ui.input("Conventional Commit", "feat(scope): subject");
-  const value = input?.trim();
-  return value ? value : null;
+  ctx.ui.setEditorText(`/${commandName} feat(scope): subject`);
+  ctx.ui.notify("Fill in the Conventional Commit message, then press Enter.", "info");
+  return null;
 }
 
 async function assertNoSecretsInStagedDiff(cwd: string): Promise<void> {
@@ -560,12 +564,37 @@ export default function statusFooterExtension(pi: ExtensionAPI): void {
     await appendLineStats(added, removed, event.input.path, event.toolName, event.toolCallId);
   }
 
+  async function queueReviewThenPush(
+    rawArgs: string,
+    ctx: ExtensionContext,
+    internalCommand: "commit-push-run" | "commit-push-pr-run",
+  ): Promise<void> {
+    const reviewCommand = pi.getCommands().find((command) => command.name === "review");
+    if (!reviewCommand) {
+      throw new Error("/review command is not available. Finish wiring the review extension first.");
+    }
+
+    const message = await resolveCommitMessage(rawArgs, ctx, internalCommand === "commit-push-run" ? "commit-push" : "commit-push-pr");
+    if (!message) return;
+
+    const validationError = getConventionalCommitError(message);
+    if (validationError) {
+      throw new Error(validationError);
+    }
+
+    pi.sendUserMessage("/review");
+    pi.sendUserMessage(`/${internalCommand} ${message}`, { deliverAs: "followUp" });
+    if (ctx.hasUI) {
+      ctx.ui.notify(`Queued /review, then /${internalCommand}.`, "info");
+    }
+  }
+
   async function runCommitWorkflow(
     rawArgs: string,
     ctx: ExtensionContext,
     options: { push: boolean; pullRequest: boolean },
   ): Promise<void> {
-    const message = await resolveCommitMessage(rawArgs, ctx);
+    const message = await resolveCommitMessage(rawArgs, ctx, options.pullRequest ? "commit-push-pr" : options.push ? "commit-push" : "commit");
     if (!message) return;
 
     const validationError = getConventionalCommitError(message);
@@ -638,14 +667,28 @@ export default function statusFooterExtension(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("commit-push", {
-    description: "git add -A + git commit + git push with Conventional Commits enforcement",
+    description: "run /review, then git add -A + git commit + git push",
+    handler: async (args, ctx) => {
+      await queueReviewThenPush(args, ctx, "commit-push-run");
+    },
+  });
+
+  pi.registerCommand("commit-push-run", {
+    description: "Internal: commit and push after /review",
     handler: async (args, ctx) => {
       await runCommitWorkflow(args, ctx, { push: true, pullRequest: false });
     },
   });
 
   pi.registerCommand("commit-push-pr", {
-    description: "git add -A + git commit + git push + gh pr create --fill",
+    description: "run /review, then git add -A + git commit + git push + gh pr create --fill",
+    handler: async (args, ctx) => {
+      await queueReviewThenPush(args, ctx, "commit-push-pr-run");
+    },
+  });
+
+  pi.registerCommand("commit-push-pr-run", {
+    description: "Internal: commit, push, and open PR after /review",
     handler: async (args, ctx) => {
       await runCommitWorkflow(args, ctx, { push: true, pullRequest: true });
     },
