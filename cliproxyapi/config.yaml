@@ -5,7 +5,7 @@ auth-dir: "~/.cli-proxy-api"
 # Claude Code needs a non-empty dummy token; localhost clients need no proxy key.
 api-keys: []
 
-# Expose only GPT-5.6 Sol and Grok 4.5 through OAuth gateway discovery.
+# Expose only GPT-5.6 Sol and Grok 4.5 from non-Anthropic OAuth providers.
 # CLIProxyAPI has exclusions but no allowlist; refresh after provider catalog upgrades.
 oauth-excluded-models:
   codex:
