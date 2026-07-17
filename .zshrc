@@ -15,7 +15,7 @@ export CLAUDE_CODE_DISABLE_COAUTHORSHIP=1
 alias cc="claude --dangerously-skip-permissions"
 alias cx="codex --yolo --no-alt-screen"
 
-# Claude Code through CLIProxyAPI: GPT by default, Grok on the Sonnet slot.
+# Claude Code through CLIProxyAPI with provider-native model names.
 claude-gpt() {
   command /opt/homebrew/bin/claude --settings "$HOME/.claude/settings-gpt.json" "$@"
 }
