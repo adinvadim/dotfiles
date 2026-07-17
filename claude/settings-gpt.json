@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "opus",
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:8317",
+    "ANTHROPIC_AUTH_TOKEN": "sk-dummy",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gpt-5.6-sol(high)",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME": "GPT-5.6 Sol (high)",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "grok-4.3",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME": "Grok 4.3",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gpt-5.6-sol(low)",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME": "GPT-5.6 Sol (low)",
+    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1"
+  }
+}
