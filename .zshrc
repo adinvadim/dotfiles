@@ -21,17 +21,6 @@ claude-gpt() {
 }
 alias ccx="claude-gpt"
 
-# Workflow orchestration: Opus plans and classifies; GPT or Grok executes.
-ccw() {
-  CLAUDE_CODE_SUBAGENT_MODEL="gpt-5.6-sol(high)" \
-    claude-gpt --model 'claude-opus-4-8[1m]' "$@"
-}
-
-ccwg() {
-  CLAUDE_CODE_SUBAGENT_MODEL="grok-4.5" \
-    claude-gpt --model 'claude-opus-4-8[1m]' "$@"
-}
-
 # Claude Code with Ollama (local models)
 olcc() {
   ANTHROPIC_AUTH_TOKEN=ollama \

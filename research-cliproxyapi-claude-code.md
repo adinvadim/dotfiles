@@ -12,7 +12,7 @@
 - CLIProxyAPI принимает Anthropic Messages, выбирает backend по реестру модели и переводит запрос/stream-ответ в формат Codex/xAI;
 - для Auto mode нужен настоящий доступный Claude-маршрут: ошибка `claude-opus-4-8 is temporarily unavailable` соответствует отсутствию зарегистрированной Claude credential/model, а не поломке GPT/Grok-переводчика.
 
-Рекомендуемая архитектура: один CLIProxyAPI с тремя OAuth-каналами `claude`, `codex`, `xai`; обычный `claude` без прокси; `ccx` с маленьким settings-overlay, указывающим только proxy URL. Отдельные shell-профили выбирают Opus-оркестратор и GPT/Grok-исполнителей. Не маскировать GPT/Grok под Sonnet/Opus: нативные имена дают предсказуемую маршрутизацию и не перехватывают внутренние Claude-вызовы.
+Рекомендуемая архитектура: один CLIProxyAPI с тремя OAuth-каналами `claude`, `codex`, `xai`; обычный `claude` без прокси; один `ccx` с маленьким settings-overlay, указывающим только proxy URL. Модель выбирается штатно через `/model`, а Workflow stages при необходимости получают явные model IDs. Не маскировать GPT/Grok под Sonnet/Opus: нативные имена дают предсказуемую маршрутизацию и не перехватывают внутренние Claude-вызовы.
 
 ## Что уже наследует `ccx`
 
@@ -112,7 +112,7 @@ CLIProxyAPI понимает `model(value)`: budget, `none`, `auto`, `minimal`, 
 3. Авторизовать Claude в CLIProxyAPI рядом с уже существующими Codex/xAI credentials.
 4. Не создавать alias `sonnet -> grok` или `opus -> gpt`; оставить нативные `gpt-5.6-sol` и `grok-4.5`.
 5. Для mixed Workflow — явная модель на stage, без глобального `CLAUDE_CODE_SUBAGENT_MODEL`.
-6. Для удобных single-backend запусков — `ccw` (Opus 1M + GPT workers) и `ccwg` (Opus 1M + Grok workers), не отдельные копии полного settings.json.
+6. Для простого интерфейса оставить один `ccx`; session model выбирать через `/model`, модели Workflow stages — нативными IDs в script.
 7. Проверять фактическую модель через proxy logs/usage и Workflow model usage, а не вопросом модели «кто ты»: self-identification ненадёжна.
 
 ## Минимальная проверка после реализации
