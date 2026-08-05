@@ -73,6 +73,9 @@
     ~/.agents/skills/code-simplifier: agents/skills/code-simplifier
     ~/.codex/skills/code-simplifier: agents/skills/code-simplifier
     ~/.claude/skills/code-simplifier: agents/skills/code-simplifier
+    ~/.agents/skills/walk-map: agents/skills/walk-map
+    ~/.codex/skills/walk-map: agents/skills/walk-map
+    ~/.claude/skills/walk-map: agents/skills/walk-map
 
 - create:
     - ~/.vim/undo-history
