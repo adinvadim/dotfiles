@@ -1,0 +1,5 @@
+interface:
+  display_name: "Walk Map"
+  short_description: "Walk a Wayfinder map through subagents"
+policy:
+  allow_implicit_invocation: false
