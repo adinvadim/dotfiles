@@ -1,0 +1,56 @@
+onboarding = false
+# Herdr keybindings tuned to match ~/.tmux.conf muscle memory.
+
+[keys]
+prefix = "ctrl+a"
+
+# tmux-like tabs/windows
+new_tab = "prefix+n"
+# macOS-like direct tab switching.
+previous_tab = "ctrl+shift+tab"
+next_tab = "ctrl+tab"
+switch_tab = "prefix+1..9"
+
+# tmux-like splits from ~/.tmux.conf
+split_vertical = "prefix+v"
+split_horizontal = "prefix+b"
+
+# tmux-like pane traversal
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+
+# tmux-like pane controls
+close_pane = "prefix+x"
+zoom = "prefix+z"
+reload_config = "prefix+r"
+resize_mode = "prefix+shift+r"
+toggle_sidebar = "prefix+shift+b"
+edit_scrollback = "prefix+/"
+
+# tmux popup equivalents: open temporary panes.
+[[keys.command]]
+key = "prefix+g"
+type = "pane"
+command = "lazygit"
+
+[[keys.command]]
+key = "prefix+shift+g"
+type = "pane"
+command = "lazygit log"
+
+[[keys.command]]
+key = "prefix+shift+j"
+type = "pane"
+command = "zsh"
+
+[ui]
+agent_panel_sort = "priority"
+
+show_agent_labels_on_pane_borders = true
+[ui.toast]
+delivery = "herdr"
+
+[experimental]
+pane_history = false

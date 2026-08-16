@@ -10,23 +10,22 @@ export ZSH="$HOME/.oh-my-zsh"
 export JAVA_HOME="/opt/homebrew/opt/openjdk"
 export N_PREFIX=$HOME/.n
 export PATH="$N_PREFIX/bin:$PATH"
+[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 export CLAUDE_CODE_DISABLE_COAUTHORSHIP=1
+export CLAUDE_CODE_NO_FLICKER=1
 
-alias cc="claude --dangerously-skip-permissions"
+alias cc="/opt/homebrew/bin/claude --dangerously-skip-permissions"
 alias cx="codex --yolo --no-alt-screen"
 
-# Claude Code through CLIProxyAPI with provider-native model names.
-claude-gpt() {
-  command /opt/homebrew/bin/claude --settings "$HOME/.claude/settings-gpt.json" "$@"
-}
-alias ccx="claude-gpt"
+export EDITOR="zed --wait"
+export VISUAL="$EDITOR"
 
 # Claude Code with Ollama (local models)
 olcc() {
   ANTHROPIC_AUTH_TOKEN=ollama \
   ANTHROPIC_API_KEY="" \
   ANTHROPIC_BASE_URL=http://localhost:11434 \
-  claude --dangerously-skip-permissions --model "${1:-qwen3-coder}" "${@:2}"
+  command /opt/homebrew/bin/claude --dangerously-skip-permissions --model "${1:-qwen3-coder}" "${@:2}"
 }
 
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
@@ -222,3 +221,23 @@ export PATH=/Users/comp/.opencode/bin:$PATH
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+
+export PATH="/Users/comp/.local/bin:$PATH"
+
+# Keep pi-fff loaded for FFF tools/autocomplete, but do not override built-in grep/find.
+# FFF grep uses mmap and can SIGBUS when indexed files are rewritten concurrently.
+export PI_FFF_MODE=tools-and-ui
+
+# Vite+ bin (https://viteplus.dev)
+[[ -f "$HOME/.vite-plus/env" ]] && source "$HOME/.vite-plus/env"
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+fpath=(~/.grok/completions/zsh $fpath)
+autoload -Uz compinit && compinit -C
+
+# Force writable, approval-free sessions; avoid zsh function snapshots slowing commands.
+grok() {
+  SHELL=/bin/bash command "$HOME/.grok/bin/grok" --permission-mode bypassPermissions --sandbox off --no-plan "$@"
+}
+# <<< grok installer <<<

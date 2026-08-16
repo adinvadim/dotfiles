@@ -6,32 +6,40 @@
 
 - create:
     - ~/.config
+    - ~/.config/herdr
+    - ~/.config/ghostty
     - ~/.config/coc
     - ~/.cli-proxy-api
     - ~/.pi/agent
     - ~/.pi/agent/agents
     - ~/.pi/agent/extensions
+    - ~/.pi/agent/bin
+    - ~/.agents
     - ~/.agents/skills
     - ~/.codex/skills
     - ~/.claude/skills
+    - ~/.claude/agents
     - ~/bin
+    - ~/Library/Application Support/com.mitchellh.ghostty
 
 - shell:
   - sh -c 'if ! command -v cliproxyapi >/dev/null 2>&1; then brew install cliproxyapi; fi'
+  - sh -c 'if ! command -v portless >/dev/null 2>&1; then npm install -g portless@0.15.5; fi'
+  - sh -c 'if ! command -v firecrawl >/dev/null 2>&1 || [ "$(firecrawl --version 2>/dev/null)" != "1.19.31" ]; then npm install -g firecrawl-cli@1.19.31; fi'
   # Make AGENTS.md / CLAUDE.md linking idempotent (backup if a regular file already exists).
+  - sh -c 'if [ -e "$HOME/.agents/AGENTS.md" ] && [ ! -L "$HOME/.agents/AGENTS.md" ]; then mv "$HOME/.agents/AGENTS.md" "$HOME/.agents/AGENTS.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.codex/AGENTS.md" ] && [ ! -L "$HOME/.codex/AGENTS.md" ]; then mv "$HOME/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.claude/CLAUDE.md" ] && [ ! -L "$HOME/.claude/CLAUDE.md" ]; then mv "$HOME/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.claude/settings.json" ] && [ ! -L "$HOME/.claude/settings.json" ]; then mv "$HOME/.claude/settings.json" "$HOME/.claude/settings.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
-  - sh -c 'if [ -e "$HOME/.claude/settings-gpt.json" ] && [ ! -L "$HOME/.claude/settings-gpt.json" ]; then mv "$HOME/.claude/settings-gpt.json" "$HOME/.claude/settings-gpt.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "/opt/homebrew/etc/cliproxyapi.conf" ] && [ ! -L "/opt/homebrew/etc/cliproxyapi.conf" ]; then mv "/opt/homebrew/etc/cliproxyapi.conf" "/opt/homebrew/etc/cliproxyapi.conf.bak.$(date +%Y%m%d%H%M%S)"; fi'
-  - sh -c 'if [ -e "$HOME/.pi/agent/AGENTS.md" ] && [ ! -L "$HOME/.pi/agent/AGENTS.md" ]; then mv "$HOME/.pi/agent/AGENTS.md" "$HOME/.pi/agent/AGENTS.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
-  - sh -c 'if [ -e "$HOME/.pi/agent/agents/scout.md" ] && [ ! -L "$HOME/.pi/agent/agents/scout.md" ]; then mv "$HOME/.pi/agent/agents/scout.md" "$HOME/.pi/agent/agents/scout.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
-  - sh -c 'if [ -e "$HOME/.pi/agent/agents/docs-scout.md" ] && [ ! -L "$HOME/.pi/agent/agents/docs-scout.md" ]; then mv "$HOME/.pi/agent/agents/docs-scout.md" "$HOME/.pi/agent/agents/docs-scout.md.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.pi/agent/settings.json" ] && [ ! -L "$HOME/.pi/agent/settings.json" ]; then mv "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
-  - sh -c 'if [ -e "$HOME/.pi/agent/extensions/status-footer.ts" ] && [ ! -L "$HOME/.pi/agent/extensions/status-footer.ts" ]; then mv "$HOME/.pi/agent/extensions/status-footer.ts" "$HOME/.pi/agent/extensions/status-footer.ts.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.pi/agent/models.json" ] && [ ! -L "$HOME/.pi/agent/models.json" ]; then mv "$HOME/.pi/agent/models.json" "$HOME/.pi/agent/models.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.pi/agent/keybindings.json" ] && [ ! -L "$HOME/.pi/agent/keybindings.json" ]; then mv "$HOME/.pi/agent/keybindings.json" "$HOME/.pi/agent/keybindings.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
   # Copy ~/.codex/config.toml as-is.
   # Remove stale symlink first, then replace atomically via temp file.
   - sh -c 'rm -f "$HOME/.codex/config.toml"; t=$(mktemp) && cp "$PWD/codex/config.toml" "$t" && mv "$t" "$HOME/.codex/config.toml"'
+  - firecrawl setup mcp --agent codex --global --keyless -y
+  - firecrawl setup mcp --agent claude --global --keyless -y
 
 - link:
     ~/.tmux.conf: .tmux.conf
@@ -41,6 +49,9 @@
     ~/.ripgreprc: .ripgreprc
     ~/.zshrc: .zshrc
     ~/.config/nvim: nvim
+    ~/.config/herdr/config.toml: herdr/config.toml
+    ~/.config/ghostty/config.ghostty: ghostty/config.ghostty
+    "~/Library/Application Support/com.mitchellh.ghostty/config.ghostty": ghostty/config.ghostty
     ~/bin/tat: bin/tat
     ~/bin/kill-by-port: bin/kill-by-port
     ~/bin/kitty-dark: bin/kitty-dark
@@ -51,39 +62,77 @@
     ~/bin/db: bin/db
     ~/bin/ohmydb: bin/ohmydb
     ~/bin/docs-list: bin/docs-list
+    ~/bin/cr: bin/cr
+    ~/bin/codex-computer-use: bin/codex-computer-use
+    ~/.pi/agent/bin/cr: bin/cr
     /opt/homebrew/share/zsh/site-functions/_db: bin/_db
     /opt/homebrew/share/zsh/site-functions/_ohmydb: bin/_ohmydb
     ~/.editorconfig: .editorconfig
+    ~/.agents/AGENTS.md: AGENTS.md
     ~/.codex/AGENTS.md: AGENTS.md
     ~/.claude/CLAUDE.md: CLAUDE.md
     ~/.claude/settings.json: claude/settings.json
-    ~/.claude/settings-gpt.json: claude/settings-gpt.json
+    ~/.claude/agents/gpt-5.6-sol.md: claude/agents/gpt-5.6-sol.md
+    ~/.claude/agents/grok-4.5.md: claude/agents/grok-4.5.md
+    ~/.claude/agents/kimi-k3-256k.md: claude/agents/kimi-k3-256k.md
     /opt/homebrew/etc/cliproxyapi.conf: cliproxyapi/config.yaml
     ~/.config/kitty: kitty
     ~/.config/coc/ultisnips: ultisnips
-    ~/.pi/agent/AGENTS.md: pi/agent/AGENTS.md
-    ~/.pi/agent/agents/scout.md: pi/agent/agents/scout.md
-    ~/.pi/agent/agents/docs-scout.md: pi/agent/agents/docs-scout.md
     ~/.pi/agent/settings.json: pi/agent/settings.json
-    ~/.pi/agent/extensions/status-footer.ts: pi/agent/extensions/status-footer.ts
+    ~/.pi/agent/models.json: pi/agent/models.json
+    ~/.pi/agent/keybindings.json: pi/agent/keybindings.json
     ~/safari-global.css: safari/global.css
     ~/.agents/skills/create-cli: agents/skills/create-cli
     ~/.codex/skills/create-cli: agents/skills/create-cli
     ~/.claude/skills/create-cli: agents/skills/create-cli
+    ~/.agents/skills/to-cli: agents/skills/to-cli
+    ~/.codex/skills/to-cli: agents/skills/to-cli
+    ~/.claude/skills/to-cli: agents/skills/to-cli
     ~/.agents/skills/code-simplifier: agents/skills/code-simplifier
     ~/.codex/skills/code-simplifier: agents/skills/code-simplifier
     ~/.claude/skills/code-simplifier: agents/skills/code-simplifier
     ~/.agents/skills/walk-map: agents/skills/walk-map
     ~/.codex/skills/walk-map: agents/skills/walk-map
     ~/.claude/skills/walk-map: agents/skills/walk-map
+    ~/.agents/skills/implement: agents/skills/implement
+    ~/.codex/skills/implement: agents/skills/implement
+    ~/.claude/skills/implement: agents/skills/implement
+    ~/.agents/skills/grill-with-paper: agents/skills/grill-with-paper
+    ~/.codex/skills/grill-with-paper: agents/skills/grill-with-paper
+    ~/.claude/skills/grill-with-paper: agents/skills/grill-with-paper
+    ~/.agents/skills/paper: agents/skills/paper
+    ~/.codex/skills/paper: agents/skills/paper
+    ~/.claude/skills/paper: agents/skills/paper
+    ~/.agents/skills/ask-matt:
+      path: agents/skills/ask-matt
+      force: true
+    ~/.codex/skills/ask-matt: agents/skills/ask-matt
+    ~/.claude/skills/ask-matt: agents/skills/ask-matt
+    ~/.agents/skills/next-human: agents/skills/next-human
+    ~/.codex/skills/next-human: agents/skills/next-human
+    ~/.claude/skills/next-human: agents/skills/next-human
+    ~/.agents/skills/codex-first: agents/skills/codex-first
+    ~/.codex/skills/codex-first: agents/skills/codex-first
+    ~/.claude/skills/codex-first: agents/skills/codex-first
+    ~/.agents/skills/npm: agents/skills/npm
+    ~/.codex/skills/npm: agents/skills/npm
+    ~/.claude/skills/npm: agents/skills/npm
+    ~/.agents/skills/tailscale-share: agents/skills/tailscale-share
+    ~/.codex/skills/tailscale-share: agents/skills/tailscale-share
+    ~/.claude/skills/tailscale-share: agents/skills/tailscale-share
+    ~/.claude/skills/codex-computer-use/SKILL.md: agents/skills/codex-computer-use/SKILL.md
 
 - create:
     - ~/.vim/undo-history
 
 - shell:
-  - sh -c 'brew services start cliproxyapi'
+  # Reload the linked config on repeat installs; restart also starts a stopped service.
+  - sh -c 'brew services restart cliproxyapi'
+  # Apply duti file associations (Zed as default for source code)
+  - sh -c 'which duti >/dev/null 2>&1 && duti "$PWD/duti/default" || echo "duti not found, skipping file associations"'
+  - sh -c 'if command -v herdr >/dev/null 2>&1; then herdr integration install claude; else echo "herdr not found, skipping Claude integration"; fi'
   - [git submodule update --init --recursive, Installing submodules]
-  - sh -c 'if ! npm ls -g --depth=0 @mariozechner/pi-coding-agent >/dev/null 2>&1; then npm install -g @mariozechner/pi-coding-agent; fi'
+  - sh -c 'if ! npm ls -g --depth=0 @earendil-works/pi-coding-agent >/dev/null 2>&1; then npm install -g @earendil-works/pi-coding-agent; fi'
   - sh -c 'if [ ! -x "$HOME/.bun/bin/bun" ]; then curl -fsSL https://bun.sh/install | bash; fi'
   - sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
   - sh -c 'if [ ! -d "$HOME/.oh-my-zsh" ]; then RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; fi'

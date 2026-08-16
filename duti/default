@@ -1,0 +1,34 @@
+# duti settings — Zed as default editor for source code files
+# Format: bundle_id  UTI_or_extension  role
+# Apply with: duti ~/sandbox/dotfiles/duti/default
+
+# Swift
+dev.zed.Zed    public.swift-source    all
+
+# C / C++ / ObjC
+dev.zed.Zed    public.c-source               all
+dev.zed.Zed    public.c-plus-plus-source     all
+dev.zed.Zed    public.c-header               all
+dev.zed.Zed    public.c-plus-plus-header     all
+dev.zed.Zed    public.objective-c-source     all
+dev.zed.Zed    public.objective-c-plus-plus-source    all
+
+# Scripts
+dev.zed.Zed    public.python-script    all
+dev.zed.Zed    public.shell-script     all
+dev.zed.Zed    public.bash-script      all
+dev.zed.Zed    public.zsh-script       all
+dev.zed.Zed    public.ruby-script      all
+dev.zed.Zed    public.perl-script      all
+
+# Web / data formats
+dev.zed.Zed    public.json    all
+dev.zed.Zed    public.yaml    all
+dev.zed.Zed    public.xml     all
+
+# Text / Markdown
+dev.zed.Zed    net.daringfireball.markdown    all
+dev.zed.Zed    public.plain-text              all
+
+# Generic source code
+dev.zed.Zed    public.source-code    all

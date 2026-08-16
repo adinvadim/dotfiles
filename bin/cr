@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Stable cr entrypoint across interactive shells, login shells, and agent runtimes.
+# Prefer the user-installed CodeRabbit binary under ~/.local/bin.
+
+if [[ -x "$HOME/.local/bin/coderabbit" ]]; then
+  exec "$HOME/.local/bin/coderabbit" "$@"
+fi
+
+if [[ -x "$HOME/.local/bin/cr" ]]; then
+  exec "$HOME/.local/bin/cr" "$@"
+fi
+
+if command -v coderabbit >/dev/null 2>&1; then
+  exec "$(command -v coderabbit)" "$@"
+fi
+
+printf 'cr: not found. Expected one of:\n' >&2
+printf '  %s\n' "$HOME/.local/bin/coderabbit" >&2
+printf '  %s\n' "$HOME/.local/bin/cr" >&2
+printf 'Install or relink CodeRabbit CLI.\n' >&2
+exit 127

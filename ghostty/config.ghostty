@@ -1,0 +1,13 @@
+# Pass macOS-like tab switching through to terminal apps (Herdr handles it).
+# Ghostty's defaults consume these for Ghostty tabs, so emit CSI-u instead.
+keybind = ctrl+tab=csi:9;5u
+keybind = ctrl+shift+tab=csi:9;6u
+
+# Keep terminal bells and notifications completely silent.
+bell-features = no-system,no-audio,no-attention,no-title,no-border
+bell-audio-volume = 0
+notify-on-command-finish = never
+notify-on-command-finish-action = no-bell,no-notify
+app-notifications = false
+desktop-notifications = false
+auto-update = off
