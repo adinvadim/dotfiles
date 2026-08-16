@@ -13,7 +13,6 @@
     - ~/.pi/agent
     - ~/.pi/agent/agents
     - ~/.pi/agent/extensions
-    - ~/.pi/agent/bin
     - ~/.agents
     - ~/.agents/skills
     - ~/.codex/skills
@@ -62,9 +61,7 @@
     ~/bin/db: bin/db
     ~/bin/ohmydb: bin/ohmydb
     ~/bin/docs-list: bin/docs-list
-    ~/bin/cr: bin/cr
     ~/bin/codex-computer-use: bin/codex-computer-use
-    ~/.pi/agent/bin/cr: bin/cr
     /opt/homebrew/share/zsh/site-functions/_db: bin/_db
     /opt/homebrew/share/zsh/site-functions/_ohmydb: bin/_ohmydb
     ~/.editorconfig: .editorconfig
