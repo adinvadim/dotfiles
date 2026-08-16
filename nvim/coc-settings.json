@@ -7,7 +7,7 @@
     "javascript.jsx",
     "json",
     "typescript",
-    "typescript.tsx"
+    "typescript.tsx",
     "markdown"
   ],
   "tsserver.formatOnType": false,

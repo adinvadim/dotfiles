@@ -13,6 +13,20 @@
 " https://github.com/elijahmanor/dotfiles/blob/master/nvim/.config/nvim/init.vim
 " https://github.com/nicknisi/dotfiles/blob/main/config/nvim/
 
+if $VEIL_NVIM ==# '1'
+  for s:veil_bin in ['/usr/local/bin', '/opt/homebrew/bin', expand('~/.n/bin')]
+    if isdirectory(s:veil_bin) && stridx(':' . $PATH . ':', ':' . s:veil_bin . ':') < 0
+      let $PATH = s:veil_bin . ':' . $PATH
+    endif
+  endfor
+
+  let s:veil_node = exepath('node')
+  if executable(s:veil_node)
+    let g:coc_node_path = s:veil_node
+  endif
+  let g:loaded_claudecode = 1
+endif
+
 " Sets {{{
 set exrc
 set relativenumber
@@ -29,8 +43,14 @@ set ignorecase
 set smartcase
 set noswapfile
 set nobackup
-set undodir=~/.vim/undodir
-set undofile
+let s:undo_dir = stdpath('state') . '/undo'
+if !isdirectory(s:undo_dir)
+  call mkdir(s:undo_dir, 'p', 0700)
+endif
+if filewritable(s:undo_dir) == 2
+  let &undodir = s:undo_dir
+  set undofile
+endif
 set incsearch
 set termguicolors
 set scrolloff=2
@@ -38,7 +58,7 @@ set noshowmode
 set completeopt=menu,menuone,noselect
 set signcolumn=yes
 set number
-set updatetime=50
+set updatetime=300
 set encoding=UTF-8
 set clipboard+=unnamedplus " Copy paste between vim and everything else
 set nojoinspaces " don't autoinsert two spaces after '.', '?', '!' for join command
@@ -86,7 +106,6 @@ call plug#begin('~/.local/share/nvim/plugged')
 " Dashboard
 
 " UI
-Plug 'glepnir/dashboard-nvim', { 'commit': 'a36b3232c98616149784f2ca2654e77caea7a522' }
 Plug 'nvim-tree/nvim-web-devicons'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'akinsho/nvim-bufferline.lua'
@@ -149,6 +168,7 @@ Plug 'coder/claudecode.nvim'
 Plug 'gaoDean/autolist.nvim'
 Plug 'axelvc/template-string.nvim'
 
+Plug 'OXY2DEV/markview.nvim'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && npx --yes yarn install' }
 " Plug 'roobert/tailwindcss-colorizer-cmp.nvim'
 
@@ -190,6 +210,9 @@ if ok then
     { "<leader>bp", desc = "Prev buffer" },
     { "<leader>bi", desc = "Toggle pin" },
     { "<leader>bg", desc = "Pick buffer" },
+    { "<leader>m", group = "markdown" },
+    { "<leader>mv", desc = "Toggle markdown preview" },
+    { "<leader>ms", desc = "Toggle markdown split preview" },
     { "<leader>cheat", desc = "Show cheatsheet" },
   })
 end
@@ -199,6 +222,36 @@ EOF
 
 " nvim-telescope/telescope.nvim {{{
 lua << EOF
+local function file_browser_cd_and_close(prompt_bufnr)
+  local actions = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+  local entry = action_state.get_selected_entry()
+  if not entry or not entry.Path then
+    return
+  end
+
+  local path = entry.Path
+  local target = path:is_dir() and path:absolute() or path:parent():absolute()
+  vim.cmd("cd " .. vim.fn.fnameescape(target))
+  actions.close(prompt_bufnr)
+  vim.notify("cwd: " .. target, vim.log.levels.INFO)
+end
+
+local function open_file_browser()
+  local path = vim.fn.expand("%:p:h")
+  if path == "" then
+    path = vim.loop.cwd()
+  end
+
+  require("telescope").extensions.file_browser.file_browser({
+    path = path,
+    select_buffer = true,
+    prompt_path = true,
+  })
+end
+
+vim.keymap.set("n", "<leader>fs", open_file_browser, { desc = "File browser" })
+
 require('telescope').setup {
   defaults = {
 
@@ -216,6 +269,16 @@ require('telescope').setup {
 
   },
   extensions = {
+    file_browser = {
+      mappings = {
+        i = {
+          ["<C-t>"] = file_browser_cd_and_close,
+        },
+        n = {
+          ["t"] = file_browser_cd_and_close,
+        },
+      },
+    },
     fzf = {
       theme = "dropdown",
       fuzzy = true,
@@ -270,7 +333,6 @@ nnoremap <leader>fz :lua require('telescope.builtin').find_files({ find_command 
 nnoremap <leader>fb <cmd>Telescope buffers<cr>
 nnoremap <leader>fm <cmd>Telescope harpoon marks<cr>
 " nnoremap <Leader>fs :lua require'telescope.builtin'.file_browser{ cwd = vim.fn.expand('%:p:h') }<cr>
-nnoremap <leader>fs <cmd>lua require 'telescope'.extensions.file_browser.file_browser( { path = vim.fn.expand('%:p:h') } )<CR>
 nnoremap <Leader>gs :lua require'telescope.builtin'.git_status{}<cr>
 nnoremap <Leader>gc :lua require'telescope.builtin'.git_commits{}<cr>
 "nnoremap <Leader>cb :lua require'telescope.builtin'.git_branches{}<cr>
@@ -288,44 +350,533 @@ nnoremap <leader>cheat :Cheatsheet<cr>
 "}}}
 
 
-" 'glephir/dashboard-nvim' {{{
-let g:dashboard_default_executive ='telescope'
-
+" Custom dashboard {{{
 lua << EOF
-local ok, wk = pcall(require, "which-key")
-if ok then
-  wk.add({
-    { "<leader>s", group = "session" },
-    { "<leader>ss", "<cmd>SessionSave<cr>", desc = "Save session" },
-    { "<leader>sl", "<cmd>SessionLoad<cr>", desc = "Load session" },
-  })
+local dashboard = {}
+local state_file = vim.fn.stdpath("state") .. "/dashboard-projects.json"
+local line_projects = {}
+local line_meta = {}
+local saved_ui = nil
+
+local header = {
+  "███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗",
+  "████╗  ██║██╔════╝██╔═══██╗██║   ██║██║████╗ ████║",
+  "██╔██╗ ██║█████╗  ██║   ██║██║   ██║██║██╔████╔██║",
+  "██║╚██╗██║██╔══╝  ██║   ██║╚██╗ ██╔╝██║██║╚██╔╝██║",
+  "██║ ╚████║███████╗╚██████╔╝ ╚████╔╝ ██║██║ ╚═╝ ██║",
+  "╚═╝  ╚═══╝╚══════╝ ╚═════╝   ╚═══╝  ╚═╝╚═╝     ╚═╝",
+  "",
+  "                 [ @adinvadim ]                 ",
+}
+
+local function normalize_path(path)
+  if not path or path == "" then
+    return nil
+  end
+  path = vim.fn.fnamemodify(path, ":p")
+  if path ~= "/" then
+    path = path:gsub("/+$", "")
+  end
+  return path
 end
+
+local function read_state()
+  local ok, lines = pcall(vim.fn.readfile, state_file)
+  if not ok or not lines or #lines == 0 then
+    return { projects = {}, hidden = {} }
+  end
+
+  local ok_json, data = pcall(vim.json.decode, table.concat(lines, "\n"))
+  if not ok_json or type(data) ~= "table" then
+    return { projects = {}, hidden = {} }
+  end
+
+  data.projects = type(data.projects) == "table" and data.projects or {}
+  data.hidden = type(data.hidden) == "table" and data.hidden or {}
+  return data
+end
+
+local function write_state(state)
+  vim.fn.mkdir(vim.fn.fnamemodify(state_file, ":h"), "p")
+  vim.fn.writefile(vim.split(vim.json.encode(state), "\n"), state_file)
+end
+
+local function project_root(file)
+  file = normalize_path(file)
+  if not file then
+    return nil
+  end
+
+  local stat = vim.loop.fs_stat(file)
+  if not stat then
+    return nil
+  end
+
+  local dir = stat.type == "directory" and file or vim.fn.fnamemodify(file, ":h")
+  local found = vim.fs.find(".git", { path = dir, upward = true, stop = vim.env.HOME })[1]
+  return found and normalize_path(vim.fs.dirname(found)) or nil
+end
+
+local function add_project(path, opts)
+  path = normalize_path(path)
+  if not path or vim.fn.isdirectory(path) == 0 then
+    return
+  end
+
+  local state = read_state()
+  if opts and opts.unhide then
+    state.hidden[path] = nil
+  elseif state.hidden[path] then
+    return
+  end
+
+  local now = os.time()
+  local projects = {}
+  table.insert(projects, { path = path, last = now })
+
+  for _, item in ipairs(state.projects) do
+    if item.path and normalize_path(item.path) ~= path then
+      table.insert(projects, { path = normalize_path(item.path), last = item.last or 0 })
+    end
+  end
+
+  table.sort(projects, function(a, b)
+    return (a.last or 0) > (b.last or 0)
+  end)
+
+  state.projects = vim.list_slice(projects, 1, 25)
+  write_state(state)
+end
+
+local function remove_project(path)
+  path = normalize_path(path)
+  local state = read_state()
+  local projects = {}
+
+  for _, item in ipairs(state.projects) do
+    if normalize_path(item.path) ~= path then
+      table.insert(projects, item)
+    end
+  end
+
+  state.projects = projects
+  if path then
+    state.hidden[path] = true
+  end
+  write_state(state)
+end
+
+local function seed_from_oldfiles()
+  vim.cmd("silent! rshada")
+  local state = read_state()
+  local seen = {}
+  for _, item in ipairs(state.projects) do
+    if item.path then
+      seen[normalize_path(item.path)] = true
+    end
+  end
+
+  local now = os.time()
+  local changed = false
+  for _, file in ipairs(vim.v.oldfiles or {}) do
+    local root = project_root(file)
+    if root and not seen[root] and not state.hidden[root] then
+      table.insert(state.projects, { path = root, last = now - #state.projects })
+      seen[root] = true
+      changed = true
+    end
+  end
+
+  table.sort(state.projects, function(a, b)
+    return (a.last or 0) > (b.last or 0)
+  end)
+  state.projects = vim.list_slice(state.projects, 1, 25)
+
+  if changed then
+    write_state(state)
+  end
+end
+
+local function recent_projects()
+  seed_from_oldfiles()
+  local state = read_state()
+  local projects = {}
+  for _, item in ipairs(state.projects) do
+    local path = normalize_path(item.path)
+    if path and not state.hidden[path] and vim.fn.isdirectory(path) == 1 then
+      table.insert(projects, { path = path, last = item.last or 0 })
+    end
+  end
+  table.sort(projects, function(a, b)
+    return (a.last or 0) > (b.last or 0)
+  end)
+  return vim.list_slice(projects, 1, 9)
+end
+
+local function display_width(text)
+  return vim.fn.strdisplaywidth(text)
+end
+
+local function truncate(text, width)
+  if display_width(text) <= width then
+    return text
+  end
+  return vim.fn.strcharpart(text, 0, math.max(1, width - 3)) .. "..."
+end
+
+local function pad(text, width)
+  return text .. string.rep(" ", math.max(1, width - display_width(text)))
+end
+
+local function center(text, width)
+  return string.rep(" ", math.max(0, math.floor((width - display_width(text)) / 2))) .. text
+end
+
+local function setup_highlights()
+  local light = vim.o.background ~= "dark"
+  local colors = light and {
+    header = "#0F4AA0",
+    title = "#1F2937",
+    rule = "#8A94A6",
+    index = "#9CA3AF",
+    name = "#064E9B",
+    path = "#5F6B7A",
+    key = "#9A3412",
+    hint = "#374151",
+  } or {
+    header = "#7AA2F7",
+    title = "#C0CAF5",
+    rule = "#565F89",
+    index = "#6B7280",
+    name = "#7DCFFF",
+    path = "#9AA5CE",
+    key = "#F6C177",
+    hint = "#C0CAF5",
+  }
+
+  vim.api.nvim_set_hl(0, "CustomDashboardHeader", { fg = colors.header, bold = true })
+  vim.api.nvim_set_hl(0, "CustomDashboardTitle", { fg = colors.title, bold = true })
+  vim.api.nvim_set_hl(0, "CustomDashboardRule", { fg = colors.rule })
+  vim.api.nvim_set_hl(0, "CustomDashboardIndex", { fg = colors.index })
+  vim.api.nvim_set_hl(0, "CustomDashboardName", { fg = colors.name, bold = true })
+  vim.api.nvim_set_hl(0, "CustomDashboardPath", { fg = colors.path })
+  vim.api.nvim_set_hl(0, "CustomDashboardKey", { fg = colors.key, bold = true })
+  vim.api.nvim_set_hl(0, "CustomDashboardHint", { fg = colors.hint })
+end
+
+local function apply_dashboard_ui()
+  if not saved_ui then
+    saved_ui = {
+      laststatus = vim.o.laststatus,
+      showtabline = vim.o.showtabline,
+    }
+  end
+  vim.o.laststatus = 0
+  vim.o.showtabline = 0
+end
+
+local function restore_dashboard_ui()
+  if not saved_ui then
+    return
+  end
+  vim.o.laststatus = saved_ui.laststatus
+  vim.o.showtabline = saved_ui.showtabline
+  saved_ui = nil
+end
+
+local function buf_is_empty(bufnr)
+  return vim.api.nvim_buf_get_name(bufnr) == ""
+    and vim.api.nvim_buf_line_count(bufnr) == 1
+    and vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)[1] == ""
+end
+
+local function selected_project()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local line = vim.api.nvim_win_get_cursor(0)[1]
+  return line_projects[bufnr] and line_projects[bufnr][line] or nil
+end
+
+local function project_lines()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local lines = {}
+  for line, _ in pairs(line_projects[bufnr] or {}) do
+    table.insert(lines, line)
+  end
+  table.sort(lines)
+  return lines
+end
+
+local function project_cursor_col(bufnr, line)
+  local data = line_meta[bufnr] and line_meta[bufnr][line]
+  return data and data.name_start or 0
+end
+
+local function snap_project_cursor()
+  local bufnr = vim.api.nvim_get_current_buf()
+  if vim.bo[bufnr].filetype ~= "dashboard" then
+    return
+  end
+
+  local line = vim.api.nvim_win_get_cursor(0)[1]
+  if line_projects[bufnr] and line_projects[bufnr][line] then
+    local col = project_cursor_col(bufnr, line)
+    if vim.api.nvim_win_get_cursor(0)[2] ~= col then
+      vim.api.nvim_win_set_cursor(0, { line, col })
+    end
+  end
+end
+
+local function jump_project(delta)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local lines = project_lines()
+  if #lines == 0 then
+    return
+  end
+
+  local current = vim.api.nvim_win_get_cursor(0)[1]
+  local target = lines[1]
+  if delta > 0 then
+    for _, line in ipairs(lines) do
+      if line > current then
+        target = line
+        break
+      end
+    end
+  else
+    target = lines[#lines]
+    for index = #lines, 1, -1 do
+      if lines[index] < current then
+        target = lines[index]
+        break
+      end
+    end
+  end
+  vim.api.nvim_win_set_cursor(0, { target, project_cursor_col(bufnr, target) })
+end
+
+local function open_project(kind)
+  local item = selected_project()
+  if not item then
+    return
+  end
+
+  add_project(item.path, { unhide = true })
+  vim.cmd("cd " .. vim.fn.fnameescape(item.path))
+  restore_dashboard_ui()
+
+  if kind == "browser" then
+    require("telescope").extensions.file_browser.file_browser({
+      path = item.path,
+      cwd = item.path,
+      prompt_path = true,
+    })
+  else
+    require("telescope.builtin").find_files({ cwd = item.path })
+  end
+end
+
+local function forget_project()
+  local item = selected_project()
+  if not item then
+    return
+  end
+  remove_project(item.path)
+  dashboard.open()
+  vim.notify("forgot: " .. vim.fn.fnamemodify(item.path, ":t"), vim.log.levels.INFO)
+end
+
+local function refresh_projects()
+  seed_from_oldfiles()
+  dashboard.open()
+end
+
+local function close_dashboard()
+  restore_dashboard_ui()
+  if vim.api.nvim_buf_get_name(0) == "" then
+    vim.cmd("enew")
+  else
+    vim.cmd("bdelete")
+  end
+end
+
+function dashboard.open()
+  local bufnr = vim.api.nvim_get_current_buf()
+  if vim.bo[bufnr].filetype ~= "dashboard" and not buf_is_empty(bufnr) then
+    vim.cmd("enew")
+    bufnr = vim.api.nvim_get_current_buf()
+  end
+
+  vim.bo[bufnr].readonly = false
+  vim.bo[bufnr].modifiable = true
+  apply_dashboard_ui()
+  setup_highlights()
+  if not pcall(vim.api.nvim_buf_set_name, bufnr, "dashboard://Dashboard") then
+    pcall(vim.api.nvim_buf_set_name, bufnr, "dashboard://Dashboard-" .. bufnr)
+  end
+  vim.bo[bufnr].buftype = "nofile"
+  vim.bo[bufnr].bufhidden = "wipe"
+  vim.bo[bufnr].buflisted = false
+  vim.bo[bufnr].swapfile = false
+  vim.bo[bufnr].filetype = "dashboard"
+  vim.wo.number = false
+  vim.wo.relativenumber = false
+  vim.wo.signcolumn = "no"
+  vim.wo.cursorline = false
+  vim.wo.foldcolumn = "0"
+  vim.wo.colorcolumn = ""
+
+  local columns = vim.o.columns
+  local panel = math.min(96, math.max(56, columns - 8))
+  local prefix = string.rep(" ", math.max(0, math.floor((columns - panel) / 2)))
+  local projects = recent_projects()
+  local lines = {}
+  local map = {}
+  local meta = {}
+  local first_project_line = nil
+  local header_start = nil
+  local header_end = nil
+  local title_line = nil
+  local rule_line = nil
+  local hint_line = nil
+
+  for _ = 1, math.max(1, math.floor(vim.o.lines * 0.08)) do
+    table.insert(lines, "")
+  end
+
+  for _, line in ipairs(header) do
+    table.insert(lines, prefix .. center(line, panel))
+    header_start = header_start or #lines
+    header_end = #lines
+  end
+
+  table.insert(lines, "")
+  table.insert(lines, prefix .. "Recent projects")
+  title_line = #lines
+  table.insert(lines, prefix .. string.rep("─", panel))
+  rule_line = #lines
+
+  if #projects == 0 then
+    table.insert(lines, prefix .. "No projects yet. Press r to rebuild from oldfiles.")
+  else
+    local name_width = 32
+    local path_width = math.max(18, panel - name_width - 8)
+    for index, item in ipairs(projects) do
+      local name = truncate(vim.fn.fnamemodify(item.path, ":t"), name_width)
+      local path = truncate(vim.fn.fnamemodify(item.path, ":~"), path_width)
+      local line = string.format("%2d  %s%s", index, pad(name, name_width), path)
+      table.insert(lines, prefix .. line)
+      map[#lines] = item
+      meta[#lines] = {
+        index_start = #prefix,
+        index_end = #prefix + 2,
+        name_start = #prefix + 4,
+        name_end = #prefix + 4 + name_width,
+        path_start = #prefix + 4 + name_width,
+      }
+      first_project_line = first_project_line or #lines
+    end
+  end
+
+  table.insert(lines, "")
+  table.insert(lines, prefix .. "Enter open   f browser   d forget   r refresh   q close")
+  hint_line = #lines
+
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  line_projects[bufnr] = map
+  line_meta[bufnr] = meta
+
+  vim.bo[bufnr].modifiable = false
+  vim.bo[bufnr].modified = false
+
+  local opts = { buffer = bufnr, silent = true, nowait = true }
+  vim.keymap.set("n", "<CR>", function() open_project("files") end, opts)
+  vim.keymap.set("n", "f", function() open_project("browser") end, opts)
+  vim.keymap.set("n", "d", forget_project, opts)
+  vim.keymap.set("n", "r", refresh_projects, opts)
+  vim.keymap.set("n", "q", close_dashboard, opts)
+  vim.keymap.set("n", "j", function() jump_project(1) end, opts)
+  vim.keymap.set("n", "<Down>", function() jump_project(1) end, opts)
+  vim.keymap.set("n", "k", function() jump_project(-1) end, opts)
+  vim.keymap.set("n", "<Up>", function() jump_project(-1) end, opts)
+  vim.keymap.set("n", "h", "<Nop>", opts)
+  vim.keymap.set("n", "l", "<Nop>", opts)
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    buffer = bufnr,
+    callback = snap_project_cursor,
+  })
+
+  for line = header_start or 1, header_end or 0 do
+    vim.api.nvim_buf_add_highlight(bufnr, -1, "CustomDashboardHeader", line - 1, 0, -1)
+  end
+  if title_line then
+    vim.api.nvim_buf_add_highlight(bufnr, -1, "CustomDashboardTitle", title_line - 1, 0, -1)
+  end
+  if rule_line then
+    vim.api.nvim_buf_add_highlight(bufnr, -1, "CustomDashboardRule", rule_line - 1, 0, -1)
+  end
+
+  for line, data in pairs(meta) do
+    vim.api.nvim_buf_add_highlight(bufnr, -1, "CustomDashboardIndex", line - 1, data.index_start, data.index_end)
+    vim.api.nvim_buf_add_highlight(bufnr, -1, "CustomDashboardName", line - 1, data.name_start, data.name_end)
+    vim.api.nvim_buf_add_highlight(bufnr, -1, "CustomDashboardPath", line - 1, data.path_start, -1)
+  end
+
+  if hint_line then
+    vim.api.nvim_buf_add_highlight(bufnr, -1, "CustomDashboardHint", hint_line - 1, 0, -1)
+    local hint = lines[hint_line]:sub(#prefix + 1)
+    for _, key in ipairs({ "Enter", "f", "d", "r", "q" }) do
+      local start_col = hint:find(key, 1, true)
+      if start_col then
+        vim.api.nvim_buf_add_highlight(
+          bufnr,
+          -1,
+          "CustomDashboardKey",
+          hint_line - 1,
+          #prefix + start_col - 1,
+          #prefix + start_col - 1 + #key
+        )
+      end
+    end
+  end
+  if first_project_line then
+    local data = meta[first_project_line]
+    vim.api.nvim_win_set_cursor(0, { first_project_line, data and data.name_start or 0 })
+  end
+end
+
+vim.api.nvim_create_user_command("Dashboard", dashboard.open, { force = true })
+
+vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
+  callback = function(args)
+    local root = project_root(vim.api.nvim_buf_get_name(args.buf))
+    if root then
+      add_project(root, { unhide = true })
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "BufLeave", "BufWipeout" }, {
+  callback = function(args)
+    if vim.bo[args.buf].filetype == "dashboard" then
+      restore_dashboard_ui()
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd("VimEnter", {
+  callback = function()
+    vim.schedule(function()
+      if vim.fn.argc() ~= 0 then
+        return
+      end
+      if not buf_is_empty(0) then
+        return
+      end
+      dashboard.open()
+    end)
+  end,
+})
 EOF
-nnoremap <silent> <Leader>fh :DashboardFindHistory<CR>
-nnoremap <silent> <Leader>ct :DashboardChangeColorscheme<CR>
-"" nnoremap <silent> <Leader>nf :DashboardNewFile<CR>
-let g:dashboard_custom_shortcut={
-\ 'last_session'       : ', s l',
-\ 'find_history'       : ', f h',
-\ 'find_file'          : ', f f',
-\ 'new_file'           : ', n f',
-\ 'change_colorscheme' : ', c t',
-\ 'find_word'          : ', f g',
-\ 'book_marks'         : ', f m',
-\ }
-let s:header = [
-    \ '███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗',
-    \ '████╗  ██║██╔════╝██╔═══██╗██║   ██║██║████╗ ████║',
-    \ '██╔██╗ ██║█████╗  ██║   ██║██║   ██║██║██╔████╔██║',
-    \ '██║╚██╗██║██╔══╝  ██║   ██║╚██╗ ██╔╝██║██║╚██╔╝██║',
-    \ '██║ ╚████║███████╗╚██████╔╝ ╚████╔╝ ██║██║ ╚═╝ ██║',
-    \ '╚═╝  ╚═══╝╚══════╝ ╚═════╝   ╚═══╝  ╚═╝╚═╝     ╚═╝',
-    \ '',
-    \ '                 [ @adinvadim ]                 ',
-    \ ]
-let s:footer = []
-let g:dashboard_custom_header = s:header
-let g:dashboard_custom_footer = s:footer
 " }}}
 
 " 'neoclide/coc.nvim' {{{
@@ -390,8 +941,26 @@ function! s:show_documentation()
   endif
 endfunction
 
-" Highlight the symbol and its references when holding the cursor.
-autocmd CursorHold * silent call CocActionAsync('highlight')
+" Hover docs and symbol references on cursor hold.
+let g:coc_auto_hover = get(g:, 'coc_auto_hover', 1)
+
+function! s:coc_on_hold() abort
+  if &buftype !=# '' || &filetype ==# 'dashboard'
+    return
+  endif
+  if !coc#rpc#ready()
+    return
+  endif
+  silent call CocActionAsync('highlight')
+  if g:coc_auto_hover && !coc#float#has_float()
+    silent call CocActionAsync('doHover')
+  endif
+endfunction
+
+augroup coc_hold_actions
+  autocmd!
+  autocmd CursorHold * call <SID>coc_on_hold()
+augroup end
 
 " Symbol renaming.
 nmap <leader>rn <Plug>(coc-rename)
@@ -598,6 +1167,9 @@ require("bufferline").setup{
     diagnostics_indicator = function(count, level, diagnostics_dict, context)
       return "("..count..")"
     end,
+    custom_filter = function(bufnr)
+      return vim.bo[bufnr].filetype ~= "dashboard"
+    end,
     offsets = {
       {
         filetype = "coc-explorer",
@@ -680,7 +1252,7 @@ lua <<EOF
 local ok, configs = pcall(require, 'nvim-treesitter.configs')
 if ok then
   configs.setup {
-    ensure_installed = { 'html', 'javascript', 'typescript', 'tsx', 'css', 'json', 'vue', 'gitignore' },
+    ensure_installed = { 'html', 'javascript', 'typescript', 'tsx', 'css', 'json', 'vue', 'gitignore', 'markdown', 'markdown_inline' },
     auto_install = true,
     highlight = {
       enable = true,
@@ -695,6 +1267,22 @@ if ok then
   }
 end
 EOF
+" }}}
+"
+
+" OXY2DEV/markview.nvim {{{
+lua << EOF
+local ok, markview = pcall(require, "markview")
+if ok then
+  markview.setup({
+    preview = {
+      icon_provider = "devicons",
+    },
+  })
+end
+EOF
+nnoremap <leader>mv <cmd>Markview<CR>
+nnoremap <leader>ms <cmd>Markview splitToggle<CR>
 " }}}
 "
 
@@ -848,8 +1436,9 @@ nnoremap <leader>3 :lua require("harpoon.ui").nav_file(3)<CR>
 nnoremap <leader>4 :lua require("harpoon.ui").nav_file(4)<CR>
 " }}}
 
-" coder/claudecode.nvim {{{
-lua << EOF
+if $VEIL_NVIM !=# '1'
+  " coder/claudecode.nvim {{{
+  lua << EOF
 local ok, claudecode = pcall(require, "claudecode")
 if ok then
   claudecode.setup({
@@ -863,10 +1452,11 @@ else
   vim.api.nvim_create_user_command('ClaudeCodeTreeAdd', function() print("claudecode.nvim not installed") end, {})
 end
 EOF
-nnoremap <leader>cs :ClaudeCodeSend<CR>
-vnoremap <leader>cs :ClaudeCodeSend<CR>
-nnoremap <leader>ct :ClaudeCodeTreeAdd<CR>
-" }}}
+  nnoremap <leader>cs :ClaudeCodeSend<CR>
+  vnoremap <leader>cs :ClaudeCodeSend<CR>
+  nnoremap <leader>ct :ClaudeCodeTreeAdd<CR>
+  " }}}
+endif
 
 
 
