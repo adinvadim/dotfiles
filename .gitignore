@@ -1,1 +1,16 @@
+# Secrets and machine-local authentication
 .secrets
+pi/agent/auth.json
+
+# Generated agent and research artifacts
+.firecrawl/
+.pi/
+.pi-subagents/
+/context.md
+/docs-context.md
+
+# Local dependencies and macOS metadata
+node_modules/
+__pycache__/
+*.py[cod]
+.DS_Store
