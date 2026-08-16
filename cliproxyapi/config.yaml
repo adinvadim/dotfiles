@@ -5,7 +5,10 @@ auth-dir: "~/.cli-proxy-api"
 # Claude Code needs a non-empty dummy token; localhost clients need no proxy key.
 api-keys: []
 
-# Expose only GPT-5.6 Sol, GPT-5.6 Terra, and Grok 4.5 from non-Anthropic OAuth providers.
+# A single transient upstream failure must not quarantine our only Codex credential.
+transient-error-cooldown-seconds: -1
+
+# Expose only the models used by our Codex, Kimi Code, and xAI subscriptions.
 # CLIProxyAPI has exclusions but no allowlist; refresh after provider catalog upgrades.
 oauth-excluded-models:
   codex:
@@ -22,5 +25,13 @@ oauth-excluded-models:
     - "grok-build-*"
     - "grok-composer-*"
     - "grok-imagine-*"
+  kimi:
+    - "kimi-k2"
+    - "kimi-k2-thinking"
+    - "kimi-k2.5"
+    - "kimi-k2.6"
+
+# Need CLIProxyAPI >= 7.2.111 for real `kimi-k3-256k` (256k K3, lower quota).
+# Do not alias it onto `kimi-k3` — that is the separate 1M model.
 
 debug: false

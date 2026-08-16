@@ -1,22 +1,53 @@
 {
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.4",
-  "defaultThinkingLevel": "medium",
+  "defaultProvider": "xai-cli",
+  "defaultModel": "grok-4.5",
+  "defaultThinkingLevel": "high",
+  "shellCommandPrefix": "[ -f \"$HOME/.secrets\" ] && . \"$HOME/.secrets\"; . \"$HOME/.local/bin/env\"",
   "enabledModels": [
-    "openai-codex/gpt-5.4",
+    "openai-codex/gpt-5.6-sol",
+    "openai-codex/gpt-5.6-terra",
+    "openai-codex/gpt-5.6-luna",
+    "openai-codex/gpt-5.5",
     "openai-codex/gpt-5.4-mini",
-    "anthropic/claude-sonnet-4-6",
-    "anthropic/claude-opus-4-6",
+    "anthropic/claude-sonnet-5",
+    "anthropic/claude-opus-4-8",
+    "anthropic/claude-fable-5",
     "anthropic/claude-haiku-4-5",
-    "google/gemini-3.1-pro-preview",
-    "google/gemini-3.1-flash-lite-preview"
+    "kimi-coding/k2p7",
+    "kimi-coding/kimi-for-coding",
+    "zai/glm-5.2",
+    "zai/glm-5.1",
+    "zai/glm-5-turbo",
+    "zai/glm-4.7"
   ],
+  "retry": {
+    "enabled": true,
+    "maxRetries": 5,
+    "baseDelayMs": 2000,
+    "provider": {
+      "maxRetryDelayMs": 300000
+    }
+  },
   "packages": [
     "npm:pi-prompt-template-model",
-    "npm:pi-subagents"
+    "npm:pi-subagents",
+    "https://github.com/davebcn87/pi-autoresearch",
+    "git:https://github.com/badlogic/pi-diff-review",
+    "npm:@ifi/oh-pi-themes",
+    "npm:pi-intercom",
+    "/Users/comp/Projects/oss/pi-worktrees",
+    "/Users/comp/Projects/oss/pi-powerline-footer",
+    "npm:pi-mcp-adapter",
+    "npm:glimpseui"
   ],
   "pi-codex-fast": {
-    "enabled": true
+    "enabled": false
   },
-  "lastChangelogVersion": "0.62.0"
+  "enableSkillCommands": true,
+  "lastChangelogVersion": "0.80.6",
+  "hideThinkingBlock": true,
+  "transport": "sse",
+  "editorPaddingX": 0,
+  "enableInstallTelemetry": false,
+  "theme": "dark"
 }

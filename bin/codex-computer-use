@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+
+for codex_bin in \
+  "/Applications/ChatGPT.app/Contents/Resources/codex" \
+  "/Applications/Codex.app/Contents/Resources/codex" \
+  "$HOME/.codex/plugins/.plugin-appserver/codex"
+do
+  if [ -x "$codex_bin" ]; then
+    exec "$codex_bin" exec \
+      --ephemeral \
+      --dangerously-bypass-approvals-and-sandbox \
+      -m "${CODEX_COMPUTER_USE_MODEL:-gpt-5.6-sol}" \
+      -c "model_reasoning_effort=\"${CODEX_COMPUTER_USE_EFFORT:-high}\"" \
+      -C "${CODEX_COMPUTER_USE_CWD:-$PWD}" \
+      "$@"
+  fi
+done
+
+printf '%s\n' 'Codex desktop runtime not found. Install or update the ChatGPT/Codex desktop app.' >&2
+exit 127

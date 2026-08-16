@@ -5,6 +5,7 @@ model_reasoning_effort = "xhigh"
 [features]
 ghost_commit = true
 multi_agent = true
+undo = true
 
 [projects."/Users/comp/sandbox/dotfiles"]
 trust_level = "trusted"
@@ -26,3 +27,10 @@ trust_level = "trusted"
 
 [projects."/Users/comp/sandbox/oss/cmux"]
 trust_level = "trusted"
+
+[mcp_servers.paper]
+url = "http://127.0.0.1:29979/mcp"
+
+[mcp_servers.firecrawl]
+type = "http"
+url = "https://mcp.firecrawl.dev/v2/mcp"
