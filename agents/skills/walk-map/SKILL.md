@@ -62,6 +62,15 @@ authority, budgets, and the stopping point within the Destination. Treat a
 conflict with Destination as a proposed redraw, not a preference: return that
 conflict to the user before walking further.
 
+Walking a map is a deliberately autonomous mode of Wayfinder. Wayfinder types
+most tickets HITL, but a walk mediates that exchange rather than forwarding it:
+the root stands in for the user on every decision the effective instructions
+already determine, and spends the user's attention only on the ones they do
+not. Read the Run brief as delegation, not as background context — every
+preference, posture, or budget it states delegates the decisions that
+preference determines. A brief that says which way to lean has already answered
+every question that leans that way.
+
 The run is fixed when exactly one map and one verbatim Run brief are in scope.
 
 ## 2. Steward the frontier
@@ -70,6 +79,20 @@ Reload the map and query its open children before every dispatch. Choose the
 first open, unblocked, unclaimed frontier ticket in tracker order. The root may
 read titles, labels, assignees, and blocking edges to select work, but leaves
 the ticket body and all ticket mutations to its worker.
+
+Every agent session claims through the same tracker identity, so an assignee
+alone never proves a live session. Treat a claim as live only on evidence: a
+worker of this run is running and holds it, the user has said another session
+is walking this map, or the ticket carries fresh activity from a session other
+than this one. A claim without that evidence is stale residue — from this run's
+own earlier turn, a compacted context, or an abandoned walk that stopped
+waiting on a user who never answered. The root releases a stale claim itself
+and dispatches the ticket; that release is the one ticket mutation the root
+performs, and only on a ticket no live worker holds. Track which tickets this
+run's workers claim so the run can tell its own orphans from foreign work after
+interruption or compaction. That record logs the run's own acts; it is not a
+substitute for tracker state, which still decides what is open, blocked, or
+assigned.
 
 Create a fresh, isolated subagent for the chosen ticket with no inherited root
 turns. If the native lifecycle cannot start an isolated child and later resume
@@ -111,8 +134,19 @@ lost race.
 Every worker turn returns exactly one of the following discriminated outcomes.
 Include this whole contract in its work order.
 
-A worker that needs another party's judgment returns `decision_request` with
-one question:
+A decision request costs the run a round trip and may cost the user their
+attention, so a worker earns one. Before returning a request, the worker
+answers the question itself from the Destination, the Run brief, the map's
+Notes, and the evidence it gathered; when those determine an answer, it
+decides, records that reasoning and its authority in the resolution comment,
+and carries on. Only an undetermined question is raised: one that redraws the
+Destination or scope, that is expensive to reverse once later work builds on
+it, that turns on a user preference or an external fact no reachable evidence
+supplies, or that spends money, credentials, production state, or a public
+surface. A question is not undetermined merely because it is important,
+architectural, or interesting.
+
+A worker that reaches that bar returns `decision_request` with one question:
 
 ```yaml
 kind: decision_request
@@ -125,6 +159,11 @@ alternatives:
   - <a real alternative, when one exists>
 consequence: <what the answer makes decidable>
 ```
+
+`authority` is `human-required` only for an unrecoverable preference or a
+real-world commitment — the last two classes above — or when the Run brief
+reserves this class of decision to the user. Every other request is
+`root-may-decide`.
 
 Every terminal worker outcome uses its matching shape:
 
@@ -155,12 +194,21 @@ observed postcondition; it is not a request for the root to mutate the ticket.
 
 The worker supplies the question and recommendation but never answers its own
 request. A different model context is useful separation, not human authority.
-Resolve authority through the instruction precedence from Section 1. The root
-may answer only when the effective instructions explicitly delegate this class
-of decision: an explicit Run brief restriction overrides a delegation in map
-Notes, while Notes may supply delegation when the brief is silent. Otherwise,
-and whenever the worker marks `human-required`, present that single question
-and recommendation to the user and wait for the user's answer.
+The root resolves authority itself, through the instruction precedence from
+Section 1, and answers by default. It re-tests every request against the same
+bar the worker was held to rather than deferring to the `authority` field: a
+`human-required` on a question the effective instructions determine is
+downgraded and answered as `delegated-root`. If the root's own read is that the
+recommendation follows from the brief, the Destination, and the evidence, then
+that read is the answer — relaying it for agreement buys nothing and spends the
+attention the walk exists to save.
+
+The root stops for the user only when the request genuinely clears that bar,
+when the Run brief reserves this class of decision to the user, or when the
+root cannot determine the answer either. An explicit Run brief restriction
+overrides a delegation in map Notes, while Notes may supply delegation when the
+brief is silent. When one of those holds, present that single question, the
+worker's recommendation, and the root's own read, then wait for the answer.
 
 Return the answer to the same worker:
 
@@ -224,15 +272,15 @@ Continue until one of these conditions is observable:
 - **Map clear** — no open child tickets remain and Not yet specified is empty.
   Report the Destination reached and the linked decisions; stop at planning
   unless the Run brief explicitly authorizes the map's next flow.
-- **Waiting on the user** — Section 3 requires an actual user answer, whether
-  because the worker returned `human-required`, its `root-may-decide` class was
-  not effectively delegated, or a `blocked` outcome retained its claim for a
-  concrete `user_action`. One worker holds one claimed ticket and one pending
-  decision or action. Ask it and stop the turn; resume that same worker when
-  the user replies.
-- **Blocked map** — open work remains, but every ticket is blocked or claimed by
-  another session and no worker is running. Report the named blocker or claim
-  rather than manufacturing work.
+- **Waiting on the user** — Section 3 requires an actual user answer: a request
+  that clears the escalation bar and survives the root's own re-test, a class of
+  decision the Run brief reserves to the user, or a `blocked` outcome that
+  retained its claim for a concrete `user_action`. One worker holds one claimed
+  ticket and one pending decision or action. Ask it and stop the turn; resume
+  that same worker when the user replies.
+- **Blocked map** — open work remains, but every ticket is blocked or held by a
+  claim the Section 2 test finds live, and no worker is running. Report the
+  named blocker or claim rather than manufacturing work.
 - **Broken frontier** — fog remains but no ticket can advance it, or tracker
   state contradicts the map. Report the inconsistency; do not silently redraw
   the map.
@@ -244,6 +292,11 @@ Continue until one of these conditions is observable:
 - **Instruction conflict** — repository instructions, the Run brief, or map
   Notes cannot coexist with the stewardship and isolation invariants. Name the
   conflicting instructions and stop before dispatch.
+
+A terminal state is a fact about the map, not a request for permission. When
+the root can establish the state itself — releasing stale residue, rereading
+the tracker, requerying the frontier — it does that and keeps walking instead
+of stopping to ask the user to do it for it.
 
 The walk is complete only at one of these terminal states; completing one
 ticket is progress, not completion.

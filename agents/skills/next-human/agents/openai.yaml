@@ -1,0 +1,5 @@
+interface:
+  display_name: "Next Human"
+  short_description: "Work the next human checkpoint"
+policy:
+  allow_implicit_invocation: false
