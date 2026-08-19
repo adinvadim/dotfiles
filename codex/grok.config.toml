@@ -1,0 +1,13 @@
+# Codex profile: Grok 4.6 via local CLIProxyAPI.
+# Launch: codex --profile grok
+model = "grok-4.6"
+model_provider = "cliproxyapi"
+model_reasoning_effort = "high"
+
+[model_providers.cliproxyapi]
+name = "CLIProxyAPI"
+base_url = "http://127.0.0.1:8317/v1"
+wire_api = "responses"
+experimental_bearer_token = "sk-dummy"
+supports_websockets = false
+http_headers = { "X-OpenAI-Actor-Authorization" = "local-proxy" }

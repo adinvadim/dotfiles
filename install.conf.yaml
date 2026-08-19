@@ -34,6 +34,8 @@
   - sh -c 'if [ -e "$HOME/.pi/agent/settings.json" ] && [ ! -L "$HOME/.pi/agent/settings.json" ]; then mv "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.pi/agent/models.json" ] && [ ! -L "$HOME/.pi/agent/models.json" ]; then mv "$HOME/.pi/agent/models.json" "$HOME/.pi/agent/models.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
   - sh -c 'if [ -e "$HOME/.pi/agent/keybindings.json" ] && [ ! -L "$HOME/.pi/agent/keybindings.json" ]; then mv "$HOME/.pi/agent/keybindings.json" "$HOME/.pi/agent/keybindings.json.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.codex/grok.config.toml" ] && [ ! -L "$HOME/.codex/grok.config.toml" ]; then mv "$HOME/.codex/grok.config.toml" "$HOME/.codex/grok.config.toml.bak.$(date +%Y%m%d%H%M%S)"; fi'
+  - sh -c 'if [ -e "$HOME/.codex/kimi.config.toml" ] && [ ! -L "$HOME/.codex/kimi.config.toml" ]; then mv "$HOME/.codex/kimi.config.toml" "$HOME/.codex/kimi.config.toml.bak.$(date +%Y%m%d%H%M%S)"; fi'
   # Copy ~/.codex/config.toml as-is.
   # Remove stale symlink first, then replace atomically via temp file.
   - sh -c 'rm -f "$HOME/.codex/config.toml"; t=$(mktemp) && cp "$PWD/codex/config.toml" "$t" && mv "$t" "$HOME/.codex/config.toml"'
@@ -67,6 +69,8 @@
     ~/.editorconfig: .editorconfig
     ~/.agents/AGENTS.md: AGENTS.md
     ~/.codex/AGENTS.md: AGENTS.md
+    ~/.codex/grok.config.toml: codex/grok.config.toml
+    ~/.codex/kimi.config.toml: codex/kimi.config.toml
     ~/.claude/CLAUDE.md: CLAUDE.md
     ~/.claude/settings.json: claude/settings.json
     ~/.claude/agents/gpt-5.6-sol.md: claude/agents/gpt-5.6-sol.md

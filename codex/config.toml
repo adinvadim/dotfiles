@@ -34,3 +34,13 @@ url = "http://127.0.0.1:29979/mcp"
 [mcp_servers.firecrawl]
 type = "http"
 url = "https://mcp.firecrawl.dev/v2/mcp"
+
+# Defined here so T3 can pass `-c model_provider=cliproxyapi`.
+# Default CLI stays ChatGPT: do not set model_provider at the root.
+[model_providers.cliproxyapi]
+name = "CLIProxyAPI"
+base_url = "http://127.0.0.1:8317/v1"
+wire_api = "responses"
+experimental_bearer_token = "sk-dummy"
+supports_websockets = false
+http_headers = { "X-OpenAI-Actor-Authorization" = "local-proxy" }

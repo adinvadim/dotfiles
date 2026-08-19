@@ -1,0 +1,14 @@
+# Codex profile: Kimi K3 256k via local CLIProxyAPI.
+# Launch: codex --profile kimi
+# Other registered IDs: --model kimi-k3 | kimi-k2.7-code | kimi-k2.7-code-highspeed
+model = "kimi-k3-256k"
+model_provider = "cliproxyapi"
+model_reasoning_effort = "high"
+
+[model_providers.cliproxyapi]
+name = "CLIProxyAPI"
+base_url = "http://127.0.0.1:8317/v1"
+wire_api = "responses"
+experimental_bearer_token = "sk-dummy"
+supports_websockets = false
+http_headers = { "X-OpenAI-Actor-Authorization" = "local-proxy" }
