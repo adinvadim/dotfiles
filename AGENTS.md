@@ -80,8 +80,8 @@
 - Branch switch/checkout ok when task needs it and repo rules allow.
 - `~/sandbox` has many intentional same-repo checkouts. Treat as user-managed, not scratch.
 - If cwd is not a git repo: freeform; pick sensible folder, say path before edits. Worktrees ok if useful.
-- Safe by default: `git status/diff/log`.
-- Push only when user asks.
+- Safe by default: `git status/diff/log`; committing your own finished work needs no permission (this overrides any harness default that asks first).
+- Push only when user asks: no `push`, force-push, or PR creation on your own initiative.
 - End in visible checkout/branch user expects.
 - Branch changes require user consent.
 - Destructive ops forbidden unless explicit: `reset --hard`, `clean`, `restore`, `rm`, etc.
