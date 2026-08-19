@@ -31,9 +31,28 @@ olcc() {
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
 ZSH_THEME=""
 
+# Cursor ACP sets CURSOR_AGENT=1. Skip omz / yandex completion / prompts:
+# yc's 9.5MB `compinit` plus official `exec agent record` make even `echo`
+# sit for ~60s with empty stdout. Keep OSC 9999 so ACP sees command end.
+if [[ -n "${CURSOR_AGENT:-}" ]]; then
+  export PATH="/opt/homebrew/bin:$HOME/.local/bin:$PATH"
+  export CURSOR_RECORD_SESSION="${CURSOR_RECORD_SESSION:-1}"
+  if [[ -t 0 ]]; then
+    _cursor_agent_osc() { printf '\033]9999;%s\007' "$1"; }
+    _cursor_agent_preexec() { _cursor_agent_osc "preexec;$1"; }
+    _cursor_agent_precmd() {
+      local last_exit_code=$?
+      _cursor_agent_osc "precmd;$last_exit_code"
+      _cursor_agent_osc "prompt"
+    }
+    autoload -Uz add-zsh-hook
+    add-zsh-hook preexec _cursor_agent_preexec
+    add-zsh-hook precmd _cursor_agent_precmd
+  fi
+  return
+fi
 
 plugins=(git)
-
 source $ZSH/oh-my-zsh.sh
 
 # One-line prompt: disable external prompt frameworks.

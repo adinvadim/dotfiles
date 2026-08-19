@@ -64,6 +64,7 @@
     ~/bin/ohmydb: bin/ohmydb
     ~/bin/docs-list: bin/docs-list
     ~/bin/codex-computer-use: bin/codex-computer-use
+    ~/bin/cursor-agent-t3: bin/cursor-agent-t3
     /opt/homebrew/share/zsh/site-functions/_db: bin/_db
     /opt/homebrew/share/zsh/site-functions/_ohmydb: bin/_ohmydb
     ~/.editorconfig: .editorconfig

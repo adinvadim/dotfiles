@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+
+# T3 launches `cursor-agent acp` with no flags. Cursor then:
+# 1. allowlists tools unless --force (gh waits ~30s)
+# 2. dumps `zsh -ilc` state and later `eval`s it on every command
+#    — that dump inherits this process env, NOT CURSOR_AGENT=1, so
+#    ~/.zshrc (yc 9.5MB completion) gets captured and eval hangs
+#    even for `echo` / `zsh -f` / bash (those still run inside the
+#    zsh wrapper). Isolate ZDOTDIR and mark the agent env.
+export CURSOR_AGENT="${CURSOR_AGENT:-1}"
+export CURSOR_RECORD_SESSION="${CURSOR_RECORD_SESSION:-1}"
+
+here=$(cd "$(dirname "$0")" && pwd)
+if [ -L "$0" ]; then
+  target=$(readlink "$0")
+  case "$target" in
+    /*) here=$(cd "$(dirname "$target")" && pwd) ;;
+    *) here=$(cd "$(dirname "$0")/$(dirname "$target")" && pwd) ;;
+  esac
+fi
+zdotdir="${CURSOR_AGENT_ZDOTDIR:-$here/../cursor-agent-zdotdir}"
+if [ -d "$zdotdir" ]; then
+  export ZDOTDIR="$zdotdir"
+fi
+
+real="${CURSOR_AGENT_BIN:-$HOME/.local/bin/cursor-agent}"
+if [ ! -x "$real" ]; then
+  printf '%s\n' "cursor-agent not found at $real" >&2
+  exit 127
+fi
+
+exec "$real" --sandbox disabled --force --trust "$@"
