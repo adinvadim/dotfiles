@@ -76,6 +76,7 @@
     ~/.claude/settings.json: claude/settings.json
     ~/.claude/agents/gpt-5.6-sol.md: claude/agents/gpt-5.6-sol.md
     ~/.claude/agents/grok-4.5.md: claude/agents/grok-4.5.md
+    ~/.claude/agents/grok-4.6.md: claude/agents/grok-4.6.md
     ~/.claude/agents/kimi-k3-256k.md: claude/agents/kimi-k3-256k.md
     /opt/homebrew/etc/cliproxyapi.conf: cliproxyapi/config.yaml
     ~/.config/kitty: kitty

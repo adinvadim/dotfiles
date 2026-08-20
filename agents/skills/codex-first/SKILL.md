@@ -43,7 +43,7 @@ routes by model ID to the matching backend (Claude, Codex/OpenAI, xAI, Kimi,
 limited to Anthropic models.
 
 CLIProxyAPI registers native IDs such as `gpt-5.6-sol`, `gpt-5.6-terra`,
-`grok-4.5`, and `kimi-k3-256k`. Discovery may also surface cloaked
+`grok-4.5`, `grok-4.6`, and `kimi-k3-256k`. Discovery may also surface cloaked
 `claude-fable-5-dd-*` IDs for non-Claude models; those are transport wrappers,
 not different models. Prefer the native ID in agent frontmatter.
 
@@ -55,7 +55,8 @@ Agent tool's `model` parameter — that enum is only family aliases.
 Sibling user-level agents (same invoke shape, different `subagent_type`):
 
 - `gpt-5.6-sol` — default for this skill
-- `grok-4.5` — xAI Grok
+- `grok-4.5` — xAI Grok 4.5
+- `grok-4.6` — xAI Grok 4.6
 - `kimi-k3-256k` — Moonshot Kimi K3 256k
 
 `$codex-first` still defaults to Sol. Use the other types only when the parent
@@ -133,7 +134,7 @@ Why this shape works: Claude Code resolves the child model as
 `CLAUDE_CODE_SUBAGENT_MODEL` → per-invocation `model` → agent frontmatter
 `model` → parent model. The user-level agent definition
 `~/.claude/agents/gpt-5.6-sol.md` sets frontmatter `model: gpt-5.6-sol` (same
-pattern for `grok-4.5`, `kimi-k3-256k`). Full model IDs are valid
+pattern for `grok-4.5`, `grok-4.6`, `kimi-k3-256k`). Full model IDs are valid
 in that frontmatter (and in `--model` / env), but the Agent tool's
 per-invocation `model` enum is aliases only. Omitting `model` is what lets the
 frontmatter win.
