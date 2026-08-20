@@ -122,6 +122,9 @@
     ~/.agents/skills/tailscale-share: agents/skills/tailscale-share
     ~/.codex/skills/tailscale-share: agents/skills/tailscale-share
     ~/.claude/skills/tailscale-share: agents/skills/tailscale-share
+    ~/.agents/skills/ask-openclaw: agents/skills/ask-openclaw
+    ~/.codex/skills/ask-openclaw: agents/skills/ask-openclaw
+    ~/.claude/skills/ask-openclaw: agents/skills/ask-openclaw
     ~/.claude/skills/codex-computer-use/SKILL.md: agents/skills/codex-computer-use/SKILL.md
 
 - create:
