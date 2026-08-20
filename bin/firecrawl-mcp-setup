@@ -1,0 +1,79 @@
+#!/bin/sh
+#
+# Register the keyless (anonymous) hosted Firecrawl MCP server with every
+# agent harness installed on this machine. Idempotent: safe to re-run.
+#
+# The firecrawl CLI only knows claude-code/codex/cursor/opencode/openclaw;
+# Gemini CLI and pi read their own config files, so those are written here.
+
+set -e
+
+MCP_URL="https://mcp.firecrawl.dev/v2/mcp"
+
+if ! command -v firecrawl >/dev/null 2>&1; then
+  echo "firecrawl CLI not found, skipping MCP setup" >&2
+  exit 0
+fi
+
+# Config-file based clients: writing the entry is harmless even when the
+# client itself is not installed yet.
+for agent in claude codex cursor opencode; do
+  firecrawl setup mcp --agent "$agent" --global --keyless -y
+done
+
+# openclaw writes through its own CLI, so it must actually be installed.
+if command -v openclaw >/dev/null 2>&1; then
+  firecrawl setup mcp --agent openclaw --global --keyless -y
+fi
+
+# Gemini CLI: merge into ~/.gemini/settings.json (url + type, not the
+# deprecated httpUrl form).
+if command -v gemini >/dev/null 2>&1; then
+  mkdir -p "$HOME/.gemini"
+  MCP_URL="$MCP_URL" python3 - "$HOME/.gemini/settings.json" <<'PY'
+import collections, json, os, sys
+
+path = sys.argv[1]
+try:
+    with open(path) as fh:
+        data = json.load(fh, object_pairs_hook=collections.OrderedDict)
+except (FileNotFoundError, ValueError):
+    data = collections.OrderedDict()
+
+servers = data.setdefault("mcpServers", collections.OrderedDict())
+servers["firecrawl"] = collections.OrderedDict(
+    [("type", "http"), ("url", os.environ["MCP_URL"])]
+)
+
+with open(path, "w") as fh:
+    json.dump(data, fh, indent=2)
+    fh.write("\n")
+PY
+  echo "  Firecrawl MCP configured for gemini"
+fi
+
+# pi reads this shared location (~/.config/mcp/mcp.json) alongside its own
+# config. auth:false keeps it from probing the endpoint for OAuth.
+if command -v pi >/dev/null 2>&1; then
+  mkdir -p "$HOME/.config/mcp"
+  MCP_URL="$MCP_URL" python3 - "$HOME/.config/mcp/mcp.json" <<'PY'
+import collections, json, os, sys
+
+path = sys.argv[1]
+try:
+    with open(path) as fh:
+        data = json.load(fh, object_pairs_hook=collections.OrderedDict)
+except (FileNotFoundError, ValueError):
+    data = collections.OrderedDict()
+
+servers = data.setdefault("mcpServers", collections.OrderedDict())
+servers["firecrawl"] = collections.OrderedDict(
+    [("url", os.environ["MCP_URL"]), ("auth", False)]
+)
+
+with open(path, "w") as fh:
+    json.dump(data, fh, indent=2)
+    fh.write("\n")
+PY
+  echo "  Firecrawl MCP configured for pi"
+fi

@@ -39,8 +39,7 @@
   # Copy ~/.codex/config.toml as-is.
   # Remove stale symlink first, then replace atomically via temp file.
   - sh -c 'rm -f "$HOME/.codex/config.toml"; t=$(mktemp) && cp "$PWD/codex/config.toml" "$t" && mv "$t" "$HOME/.codex/config.toml"'
-  - firecrawl setup mcp --agent codex --global --keyless -y
-  - firecrawl setup mcp --agent claude --global --keyless -y
+  - sh -c 'sh "$PWD/bin/firecrawl-mcp-setup"'
 
 - link:
     ~/.tmux.conf: .tmux.conf
@@ -65,6 +64,7 @@
     ~/bin/docs-list: bin/docs-list
     ~/bin/codex-computer-use: bin/codex-computer-use
     ~/bin/cursor-agent-t3: bin/cursor-agent-t3
+    ~/bin/firecrawl-mcp-setup: bin/firecrawl-mcp-setup
     /opt/homebrew/share/zsh/site-functions/_db: bin/_db
     /opt/homebrew/share/zsh/site-functions/_ohmydb: bin/_ohmydb
     ~/.editorconfig: .editorconfig

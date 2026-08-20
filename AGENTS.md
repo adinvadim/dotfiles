@@ -36,7 +36,7 @@
 - Browser/live-UI interaction: `$control-in-app-browser`; local Mac apps: `$computer-use`. Prefer a purpose-built connector/API/CLI when UI is not explicitly required.
 - Computer Use-heavy execution: delegate long mechanical UI loops to a dedicated `gpt-5.6-terra` medium agent (or the fastest capable smaller model). Keep planning, credential/safety decisions, recovery, and final verification on the current stronger model; continue directly when handoff would lose useful state or no dedicated lane exists.
 - MCP is disabled by default; enable it only when explicitly needed.
-- Agent web access: use keyless Firecrawl MCP for search/scrape/interact/parse; authenticated Firecrawl calls require explicit user approval.
+- Agent web access: use keyless Firecrawl MCP for search/scrape/interact/parse; authenticated Firecrawl calls require explicit user approval. Re-register it across harnesses with `firecrawl-mcp-setup`.
 
 ## Project Defaults
 
