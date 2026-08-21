@@ -132,6 +132,9 @@
     ~/.agents/skills/bugfix: agents/skills/bugfix
     ~/.codex/skills/bugfix: agents/skills/bugfix
     ~/.claude/skills/bugfix: agents/skills/bugfix
+    ~/.agents/skills/babysit-pr: agents/skills/babysit-pr
+    ~/.codex/skills/babysit-pr: agents/skills/babysit-pr
+    ~/.claude/skills/babysit-pr: agents/skills/babysit-pr
     ~/.claude/skills/codex-computer-use/SKILL.md: agents/skills/codex-computer-use/SKILL.md
 
 - create:
