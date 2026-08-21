@@ -117,6 +117,9 @@
     ~/.agents/skills/tailscale-share: agents/skills/tailscale-share
     ~/.codex/skills/tailscale-share: agents/skills/tailscale-share
     ~/.claude/skills/tailscale-share: agents/skills/tailscale-share
+    ~/.agents/skills/babysit-pr: agents/skills/babysit-pr
+    ~/.codex/skills/babysit-pr: agents/skills/babysit-pr
+    ~/.claude/skills/babysit-pr: agents/skills/babysit-pr
     ~/.claude/skills/codex-computer-use/SKILL.md: agents/skills/codex-computer-use/SKILL.md
 
 - create:
