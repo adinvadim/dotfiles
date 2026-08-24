@@ -5,7 +5,8 @@ workspace=${YOUDO_WORKSPACE:-/Users/mini/.openclaw/workspace-freelancer}
 operations="$workspace/state/youdo-operations.json"
 state_file="$workspace/state/auto-offer-trigger-state.json"
 lock_dir="$workspace/state/.youdo-auto-offer.lock"
-export PATH=/Users/mini/.openclaw/workspace/tools/youdo-cli:/Users/mini/.local/bin:/Users/mini/bin:/opt/homebrew/bin:/usr/bin:/bin
+path_prefix=${YOUDO_PATH_PREFIX:-}
+export PATH=${path_prefix:+$path_prefix:}/Users/mini/.openclaw/workspace/tools/youdo-cli:/Users/mini/.local/bin:/Users/mini/bin:/opt/homebrew/bin:/usr/bin:/bin
 
 lock_owned=false
 cleanup() {
@@ -60,15 +61,46 @@ if [[ $(printf '%s' "$scan_result" | /usr/bin/jq -r '.ok // false') != true ]]; 
 fi
 
 current_ids=$(printf '%s' "$scan_result" | /usr/bin/jq -c '.task_ids')
-inbox_result=$("$workspace/scripts/scan-youdo-inbox.zsh") || inbox_result='{"ok":false,"error":"inbox_scan_failed","new_count":0,"items":[],"chat_send":false}'
-if ! printf '%s' "$inbox_result" | /usr/bin/jq -e 'type == "object"' >/dev/null 2>&1; then
-  inbox_result='{"ok":false,"error":"invalid_inbox_scan_result","new_count":0,"items":[],"chat_send":false}'
+if [[ -x $workspace/scripts/record-youdo-stage-timing.zsh ]]; then
+  printf '%s' "$current_ids" | /usr/bin/jq -r '.[]?' | while read -r seen_id; do
+    [[ $seen_id == <-> ]] || continue
+    if [[ -f $workspace/state/youdo-task-timings.json ]] && /usr/bin/jq -e --arg id "$seen_id" '.tasks[$id].first_seen != null' "$workspace/state/youdo-task-timings.json" >/dev/null; then
+      continue
+    fi
+    "$workspace/scripts/record-youdo-stage-timing.zsh" "$seen_id" detect start >/dev/null || true
+    "$workspace/scripts/record-youdo-stage-timing.zsh" "$seen_id" detect end >/dev/null || true
+  done
 fi
-inbox_new_count=$(printf '%s' "$inbox_result" | /usr/bin/jq -r '.new_count // 0')
-crm_sync=$("$workspace/scripts/sync-youdo-crm.zsh") || crm_sync='{"ok":false,"error":"crm_sync_failed"}'
-if ! printf '%s' "$crm_sync" | /usr/bin/jq -e 'type == "object"' >/dev/null 2>&1; then
-  crm_sync='{"ok":false,"error":"invalid_crm_sync_result"}'
-fi
+
+inbox_result='{"ok":true,"new_count":0,"items":[],"chat_send":false}'
+inbox_new_count=0
+crm_sync='{"ok":true,"deal_count":0,"message_received_count":0}'
+
+run_chat_crm_sync() {
+  local timing_ids=${1:-[]}
+  if [[ -x $workspace/scripts/record-youdo-stage-timing.zsh ]]; then
+    printf '%s' "$timing_ids" | /usr/bin/jq -r '.[]?' | while read -r timed_id; do
+      [[ $timed_id == <-> ]] || continue
+      "$workspace/scripts/record-youdo-stage-timing.zsh" "$timed_id" chat_crm_sync start >/dev/null || true
+    done
+  fi
+  inbox_result=$("$workspace/scripts/scan-youdo-inbox.zsh") || inbox_result='{"ok":false,"error":"inbox_scan_failed","new_count":0,"items":[],"chat_send":false}'
+  if ! printf '%s' "$inbox_result" | /usr/bin/jq -e 'type == "object"' >/dev/null 2>&1; then
+    inbox_result='{"ok":false,"error":"invalid_inbox_scan_result","new_count":0,"items":[],"chat_send":false}'
+  fi
+  inbox_new_count=$(printf '%s' "$inbox_result" | /usr/bin/jq -r '.new_count // 0')
+  crm_sync=$("$workspace/scripts/sync-youdo-crm.zsh") || crm_sync='{"ok":false,"error":"crm_sync_failed"}'
+  if ! printf '%s' "$crm_sync" | /usr/bin/jq -e 'type == "object"' >/dev/null 2>&1; then
+    crm_sync='{"ok":false,"error":"invalid_crm_sync_result"}'
+  fi
+  if [[ -x $workspace/scripts/record-youdo-stage-timing.zsh ]]; then
+    printf '%s' "$timing_ids" | /usr/bin/jq -r '.[]?' | while read -r timed_id; do
+      [[ $timed_id == <-> ]] || continue
+      "$workspace/scripts/record-youdo-stage-timing.zsh" "$timed_id" chat_crm_sync end >/dev/null || true
+    done
+  fi
+}
+
 now_utc=$(/bin/date -u +%Y-%m-%dT%H:%M:%SZ)
 actionable_ids=$(/usr/bin/jq -cn --argjson current "$current_ids" --slurpfile state "$operations" --arg now "$now_utc" '
   ($state[0].tasks // {}) as $tasks
@@ -107,7 +139,7 @@ write_trigger_state() {
   /usr/bin/jq -cn --arg now "$state_now" --arg error "$run_error" \
     --argjson current "$current_ids" --argjson actionable "$actionable_ids" --argjson llm "$llm_calls" '
       {schema_version:2,last_scan_at:$now,current_task_ids:$current,actionable_task_ids:$actionable,llm_calls_last_run:$llm}
-      + (if $llm == 1 then {last_agent_run_at:$now} else {} end)
+      + (if $llm > 0 then {last_agent_run_at:$now} else {} end)
       + (if $error != "" then {last_error:$error} else {} end)
     ' > "$tmp"
   /bin/chmod 600 "$tmp"
@@ -115,6 +147,7 @@ write_trigger_state() {
 }
 
 if (( actionable_count == 0 )); then
+  run_chat_crm_sync '[]'
   if ! position_enrichment=$("$workspace/scripts/capture-youdo-offer-position.zsh" 2>/dev/null); then
     position_enrichment=${position_enrichment:-'{"ok":false,"error":"position_enrichment_failed","llm_calls":0}'}
   fi
@@ -152,7 +185,7 @@ fi
 
 id_csv=$(printf '%s' "$batch_ids" | /usr/bin/jq -r 'join(", ")')
 session_run=$(/bin/date -u +%Y%m%dT%H%M%SZ)-$$
-message="Новые или готовые к retry YouDo task ID: $id_csv. Прочитай skills/youdo-auto-offer/SKILL.md полностью и выполни его в режиме live только для этих ID. Для каждого ID обязательно зафиксируй конечный outcome через scripts/record-youdo-outcome.zsh. Пользователь заранее разрешил автономную отправку; отдельный GO не нужен. Затем выполни skills/youdo-inbox-scan/SKILL.md для текущего среза state/inbox-scan-pending.json. Не вызывай Адама и не вызывай chat send."
+message="Новые или готовые к retry YouDo task ID: $id_csv. Прочитай skills/youdo-auto-offer/SKILL.md полностью и выполни его в режиме live только для этих ID. Для каждого ID обязательно зафиксируй конечный outcome через scripts/record-youdo-outcome.zsh. Пользователь заранее разрешил автономную отправку; отдельный GO не нужен. Inbox scan и CRM sync выполнятся после этого turn. Не вызывай Адама и не вызывай chat send."
 
 
 cd "$workspace"
@@ -189,6 +222,26 @@ actionable_ids=$(/usr/bin/jq -cn --argjson ids "$actionable_ids" --slurpfile sta
           | (["confirmed","rejected","deferred","ambiguous","missed"] | index($outcome)) == null)]
 ')
 remaining_count=$(printf '%s' "$actionable_ids" | /usr/bin/jq 'length')
-write_trigger_state 1
-/usr/bin/jq -cn --argjson processed "$batch_count" --argjson remaining "$remaining_count" --argjson queued "$actionable_count" --argjson inbox "$inbox_result" --argjson crm "$crm_sync" \
-  '{ok:true,processed_count:$processed,remaining_count:$remaining,queue_count:$queued,inbox:$inbox,crm:$crm,llm_calls:1}'
+run_chat_crm_sync "$batch_ids"
+inbox_llm=0
+if (( inbox_new_count > 0 )); then
+  session_run=$(/bin/date -u +%Y%m%dT%H%M%SZ)-$$
+  inbox_message="Inbox YouDo: new_count=$inbox_new_count. Прочитай skills/youdo-inbox-scan/SKILL.md и запиши отчёт владельцу. Не вызывай Адама и не вызывай chat send. Отклики уже обработаны в этом запуске."
+  if openclaw --log-level silent agent \
+    --agent freelancer \
+    --session-key "agent:freelancer:youdo-inbox-cron-$session_run" \
+    --message "$inbox_message" \
+    --thinking low \
+    --timeout 900 >/dev/null; then
+    inbox_llm=1
+  else
+    write_trigger_state 2 inbox_agent_run_failed
+    /usr/bin/jq -cn --argjson processed "$batch_count" --argjson inbox "$inbox_result" --argjson crm "$crm_sync" \
+      '{ok:false,error:"inbox_agent_run_failed",processed_count:$processed,inbox:$inbox,crm:$crm,llm_calls:2}'
+    exit 3
+  fi
+fi
+llm_calls=$((1 + inbox_llm))
+write_trigger_state "$llm_calls"
+/usr/bin/jq -cn --argjson processed "$batch_count" --argjson remaining "$remaining_count" --argjson queued "$actionable_count" --argjson inbox "$inbox_result" --argjson crm "$crm_sync" --argjson llm "$llm_calls" \
+  '{ok:true,processed_count:$processed,remaining_count:$remaining,queue_count:$queued,inbox:$inbox,crm:$crm,llm_calls:$llm}'

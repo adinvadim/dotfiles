@@ -12,7 +12,7 @@ done
 zsh -n "$stage"/scripts/*.zsh "$stage"/tests/*.zsh "$stage"/tests/fixtures/*.zsh
 ruby -e 'require "yaml"; text=File.read(ARGV[0]); front=text.split(/^---\s*$\n/)[1]; YAML.safe_load(front, permitted_classes: [], aliases: false)' \
   "$stage/skills/youdo-daily-report/SKILL.md"
-/usr/bin/jq -e '.schema_version == 1 and (.artifacts|keys|length) == 23' "$manifest" >/dev/null
+/usr/bin/jq -e '.schema_version == 1 and (.artifacts|keys|length) == 25' "$manifest" >/dev/null
 
 /usr/bin/jq -r '.artifacts | to_entries[] | select(.key != "cli") | [.key,.value] | @tsv' "$manifest" \
   | while IFS=$'\t' read -r artifact_rel expected_sha; do
