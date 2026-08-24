@@ -18,8 +18,8 @@ db=${YOUDO_ARCHIVE_DB:-$HOME/Library/Application Support/youdo/accounts/personal
         (.[0].raw_json | fromjson? // .) as $offer
         | {
             ok: true,
-            has_legal_entity: ($offer.CreatorInfo.UserInfo.HasLegalEntity // null),
-            is_partner: ($offer.IsPartner // null),
+            has_legal_entity: $offer.CreatorInfo.UserInfo.HasLegalEntity,
+            is_partner: $offer.IsPartner,
             source: "proposals_sent"
           }
       end
