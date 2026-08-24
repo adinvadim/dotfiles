@@ -8,7 +8,8 @@ trap cleanup EXIT INT TERM
 
 /bin/mkdir -p "$fixture/bin" "$fixture/state" "$fixture/scripts"
 /bin/cp "$stage/scripts/youdo-exec.zsh" "$fixture/scripts/youdo-exec.zsh"
-/bin/chmod 700 "$fixture/scripts/youdo-exec.zsh"
+/bin/cp "$stage/scripts/classify-youdo-offer-actor.zsh" "$fixture/scripts/classify-youdo-offer-actor.zsh"
+/bin/chmod 700 "$fixture/scripts/youdo-exec.zsh" "$fixture/scripts/classify-youdo-offer-actor.zsh"
 
 cat > "$fixture/bin/youdo" <<'EOF'
 #!/bin/zsh
@@ -25,5 +26,17 @@ forced=$(YOUDO_WORKSPACE="$fixture" YOUDO_BIN="$fixture/bin/youdo" "$fixture/scr
 
 list=$(YOUDO_WORKSPACE="$fixture" YOUDO_BIN="$fixture/bin/youdo" "$fixture/scripts/youdo-exec.zsh" cli offer list)
 [[ $list == *'--sbr'* ]] && { print -u2 "list should not force --sbr: $list"; exit 1; }
+[[ $list == *'--legal-entity'* ]] && { print -u2 "list should not force --legal-entity: $list"; exit 1; }
+
+personal=$(YOUDO_TASK_JSON='{"id":"15109030","isB2B":false}' YOUDO_WORKSPACE="$fixture" YOUDO_BIN="$fixture/bin/youdo" "$fixture/scripts/youdo-exec.zsh" cli offer create 15109030 --price 1)
+[[ $personal == *'--sbr'* ]] || { print -u2 "personal create dropped --sbr: $personal"; exit 1; }
+[[ $personal == *'--legal-entity'* ]] && { print -u2 "personal create requested legal-entity: $personal"; exit 1; }
+
+business=$(YOUDO_TASK_JSON='{"id":"15121387","isB2B":true}' YOUDO_WORKSPACE="$fixture" YOUDO_BIN="$fixture/bin/youdo" "$fixture/scripts/youdo-exec.zsh" cli offer create 15121387 --price 1)
+[[ $business == *'--sbr'* ]] || { print -u2 "business create dropped --sbr: $business"; exit 1; }
+[[ $business == *'--legal-entity'* ]] || { print -u2 "business create missing --legal-entity: $business"; exit 1; }
+
+forced_personal=$(YOUDO_TASK_JSON='{"id":"15109030","isB2B":false}' YOUDO_WORKSPACE="$fixture" YOUDO_BIN="$fixture/bin/youdo" "$fixture/scripts/youdo-exec.zsh" cli offer create 15109030 --legal-entity --price 1)
+[[ $forced_personal == *'--legal-entity'* ]] && { print -u2 "personal task kept --legal-entity: $forced_personal"; exit 1; }
 
 /usr/bin/jq -cn '{ok:true}'

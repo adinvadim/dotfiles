@@ -105,20 +105,20 @@ scripts/record-youdo-outcome.zsh deferred <task-id> payment_blocked <UTC retry-a
 
 ```bash
 scripts/youdo-exec.zsh cli --timeout 90s --account personal --dry-run --no-input --json offer create "<task-id>" \
-  --sbr --payment package --price <копейки> --text-file "drafts/<task-id>.md"
+  --sbr --payment package --price <копейки> --text-file "drafts/<task-id>.md" [ --legal-entity ]
 ```
 
 Проверь `dryRun=true`, `capability=offer.create`, `confirmationClass=financial`, запрошенный payment `package`, task ID, цену и хеш текста. Сохрани отчёт в `reports/<UTC timestamp>-dry-run.md`. В режиме `dry-run` на этом закончи. Не используй `--force`.
 
 ## 7. Live
 
-В режиме `live` отправь отклик на каждое подходящее новое задание. Числового лимита на запуск или сутки нет. Обычные задачи и «Сделка без риска» используют один и тот же CLI-путь с обязательным `--sbr`. Wrapper `youdo-exec.zsh` добавляет флаг, если модель его забыла. CLI сам получает единственную допустимую токенизированную карту для SBR, сверяет её с принципалом и не выводит реквизиты.
+В режиме `live` отправь отклик на каждое подходящее новое задание. Числового лимита на запуск или сутки нет. Обычные задачи и «Сделка без риска» используют один и тот же CLI-путь с обязательным `--sbr`. Wrapper `youdo-exec.zsh` добавляет флаг, если модель его забыла. CLI сам получает единственную допустимую токенизированную карту для SBR, сверяет её с принципалом и не выводит реквизиты. Актёр отклика это `personal` или `legal-entity`. Классифицируй карточку через `scripts/classify-youdo-offer-actor.zsh` по YouDo `isB2B` / `isManagedB2B` или бейджу «Бизнес-задание». Для `legal-entity` добавь `--legal-entity` на этот create. Для `personal` не добавляй. Не включай `HasLegalEntity` в профиле YouDo.
 
 Непосредственно перед отправкой повторно проверь `offer verify` вызовом `exec` с `timeoutSeconds: 240`: `conclusive=true`, `safeToCreate=true`, `published=false`, `canAddOffer=true`, `isPostOffer=false`. Затем выполни create вызовом `exec` с `timeoutSeconds: 600`:
 
 ```bash
 scripts/youdo-exec.zsh cli --timeout 90s --account personal --force --no-input --json offer create "<task-id>" \
-  --sbr --payment package --price <копейки> --text-file "drafts/<task-id>.md"
+  --sbr --payment package --price <копейки> --text-file "drafts/<task-id>.md" [ --legal-entity ]
 ```
 
 После `ok=true` и непустого `providerId` немедленно выполни task-scoped proof с `timeoutSeconds: 240`:

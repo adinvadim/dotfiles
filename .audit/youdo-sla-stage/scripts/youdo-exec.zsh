@@ -55,6 +55,7 @@ case $tool in
     cli_args=()
     saw_offer=0
     saw_create=0
+    want_legal_entity=0
     for arg in "$@"; do
       case $arg in
         offer) saw_offer=1; cli_args+=("$arg") ;;
@@ -65,11 +66,24 @@ case $tool in
           cli_args+=("$arg")
           ;;
         --sbr|--sbr=true|--sbr=false) ;;
+        --legal-entity|--legal-entity=true) want_legal_entity=1 ;;
+        --legal-entity=false) ;;
         *) cli_args+=("$arg") ;;
       esac
     done
     if (( saw_create )); then
+      if [[ -n ${YOUDO_TASK_JSON:-} ]]; then
+        actor_json=$(zsh "${0:A:h}/classify-youdo-offer-actor.zsh" "$YOUDO_TASK_JSON")
+        if [[ $(printf '%s' "$actor_json" | /usr/bin/jq -r '.actor // empty') == legal-entity ]]; then
+          want_legal_entity=1
+        else
+          want_legal_entity=0
+        fi
+      fi
       cli_args+=(--sbr)
+      if (( want_legal_entity )); then
+        cli_args+=(--legal-entity)
+      fi
     fi
     "$youdo_bin" "${cli_args[@]}"
     ;;

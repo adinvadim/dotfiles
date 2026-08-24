@@ -21,5 +21,5 @@ YouDo безопасная оплата / SBR. Every published offer must set `I
 _Avoid_: escrow, safe-pay as a second product name
 
 **Legal entity**:
-YouDo account flag `HasLegalEntity` on the contractor profile. Offers inherit that name. There is no separate offer-create company flag.
-_Avoid_: B2B offer field, second identity, invented payload key
+One-offer actor `personal` or `legal-entity`. YouDo task `isB2B` / `isManagedB2B` selects legal-entity. Personal tasks stay personal. This is not the account `HasLegalEntity` profile toggle.
+_Avoid_: global profile switch, company name on every create
