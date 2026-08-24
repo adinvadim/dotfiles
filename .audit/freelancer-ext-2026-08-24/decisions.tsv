@@ -1,0 +1,7 @@
+ts	phase	decision	why	evidence	result
+2026-08-24T11:09:47Z	frame	kept CRM as a projection of confirmed operations	smallest local funnel, no SaaS	.audit/youdo-sla-stage/CONTEXT.md	locked after OpenClaw confirm
+2026-08-24T11:09:47Z	safe-deal	forced --sbr in youdo-exec wrapper	skill text is not enough, wrapper is the gate	.audit/youdo-sla-stage/scripts/youdo-exec.zsh	tests green
+2026-08-24T11:09:47Z	legal-entity	reused YouDo HasLegalEntity on the profile, did not add an offer field	first-party offer save has no company flag	archive proposals_sent CreatorInfo.UserInfo.HasLegalEntity	live value false, leftover is enabling it on YouDo
+2026-08-24T11:09:47Z	polling	moved scan cron to every minute and kept the ID-only scanner	empty tick must stay tokenless, lock covers overlap	live scan 34s pages=2 count=27 llm not involved	VERIFIED cheap path, cadence live
+2026-08-24T11:09:47Z	telegram	added freelancer tokenFile account and a specific binding before telegram star	isolate DMs from Adam	1Password item OpenClaw Freelancer Telegram Bot, getMe username adinvadim_freelance_bot	config valid, daemon restart blocked by existing gateway pid
+2026-08-24T11:12:04Z	verify	OpenClaw post-implement sanity timed out with Exec failed	freelancer was likely busy on the new one-minute cron	session agent:freelancer:cc-freelancer-ext-2026-08-24	INCONCLUSIVE, live verifier and scan timing still green

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "measurement_started_at": "2026-08-21T05:33:00Z",
+  "window_size": 30,
+  "tasks": {
+    "15110189": {
+      "task_id": "15110189",
+      "eligibility": "eligible",
+      "state": "confirmed",
+      "offer_id": "66998641",
+      "price_minor": 2200000,
+      "draft_path": "drafts/15110189.md",
+      "provider_position_index": 7,
+      "offer_position": 8,
+      "task_offers_count": 8,
+      "resolved_at": "2026-08-21T05:34:00Z"
+    },
+    "15110255": {
+      "task_id": "15110255",
+      "eligibility": "eligible",
+      "state": "confirmed",
+      "offer_id": "66998897",
+      "price_minor": 1400000,
+      "draft_path": "drafts/15110255.md",
+      "provider_position_index": 11,
+      "offer_position": 12,
+      "task_offers_count": 13,
+      "resolved_at": "2026-08-21T05:35:00Z"
+    },
+    "15110332": {
+      "task_id": "15110332",
+      "eligibility": "conditional",
+      "state": "deferred",
+      "reason": "payment_blocked",
+      "retry_after": "2026-08-22T05:38:00Z",
+      "updated_at": "2026-08-21T05:38:00Z"
+    }
+  },
+  "events": [
+    {"task_id":"15110189","outcome":"confirmed","offer_id":"66998641","resolved_at":"2026-08-21T05:34:00Z"},
+    {"task_id":"15110255","outcome":"confirmed","offer_id":"66998897","resolved_at":"2026-08-21T05:35:00Z"}
+  ],
+  "baseline_incidents": [
+    {"task_id":"15106049","outcome":"confirmed_after_false_ambiguous","offer_id":"66998700"},
+    {"task_id":"15110538","outcome":"missed_before_fix","reason":"sbr_finalizer_broken"},
+    {"task_id":"15110541","outcome":"missed_before_fix","reason":"sbr_finalizer_broken"}
+  ],
+  "updated_at": "2026-08-21T05:38:00Z"
+}

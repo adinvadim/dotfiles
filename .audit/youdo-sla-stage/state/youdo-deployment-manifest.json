@@ -1,0 +1,30 @@
+{
+  "artifacts": {
+    "cli": "60e35590de4755bb17cb4e2ec4c2dce83ff368ef0217bbcb1090ddf0626ba418",
+    "scripts/build-youdo-daily-report-input.zsh": "0f27ebb7eaca9ec7cef4dcd392faafc287fc95a69a42a8c501d59c02b7ab5352",
+    "scripts/capture-youdo-offer-position.zsh": "4bc19e61ca56a84e99f3cd2211665e62e4fac3653be976bb2009b7d68718494c",
+    "scripts/finalize-youdo-sbr-offer.zsh": "814722da8756d700b4ab1290f5c32c99bb1be95a4c70abb64d4f451163da6535",
+    "scripts/finish-youdo-monitor-run.zsh": "cd6f54c1645a0f4fff98586d28b9a84a6b91497b6b158c15afb7c0139e12fb1f",
+    "scripts/reconcile-youdo-ambiguous.zsh": "f55b247a0a359590b1b978c42b287d577c84498ccbdf61ddb22b322614825fc6",
+    "scripts/record-youdo-crm-transition.zsh": "fbbfe674323853740afcfaa51cfca2ce9ed095f712086165620589da19fd7425",
+    "scripts/record-youdo-outcome.zsh": "f074ed4628952b8dbbe844bacfbe22ac910be01354d66b702d850649a22fe1e3",
+    "scripts/requeue-youdo-covered-payment-blocked.zsh": "77f8ddab7f0501516036446a7549f8de99dedd1efde11927bb48ce96e57c6c12",
+    "scripts/run-youdo-auto-offer-if-new.zsh": "99e81a1f910cc269e370a7477b75cf81a29ae6bed13661916d41d41fff6417fc",
+    "scripts/run-youdo-daily-report.zsh": "5095433d10fba2716578844a46e6546b4d900ff6cdeb1746170f3bb5ef19986f",
+    "scripts/scan-youdo-inbox.zsh": "1efb867dda8bcacc571032c159ebe35eee5a96b7e9ce95aa9a65969a966a9f07",
+    "scripts/scan-youdo-new-tasks.zsh": "dc49e5fbab80ab7fc1573a9b504691565e0beabaa389c947251ccaf858b19753",
+    "scripts/sync-youdo-crm.zsh": "0b0001e9b606866fb27a25924cdc7a9b8ccbaa7b946b4d932bc5ede1e96b11f6",
+    "scripts/verify-youdo-deployment.zsh": "47f9a0dbf73e91145b2f19bfd8be514347a33a01b8c866c0a28a5ef9ca8ce480",
+    "scripts/write-youdo-daily-report.zsh": "f464bf9ad4eeb47c810bf8805b15f760521fb8156c58839a18db82c36d3b1a9d",
+    "scripts/youdo-crm.zsh": "7371f27541285c9920c5a53d7695bc2a752f55ebe74a929b2aa3cd88cdf28cb3",
+    "scripts/youdo-exec.zsh": "6e0ba90e3358185e3746a9e7cdb577687dc8078ac3d1d14c963554906cccfcaf",
+    "scripts/youdo-sla-monitor.zsh": "5ca50bc6c42f29b684a9ecce73e022a13255626f968684aca21dc550cf827cd3",
+    "skills/youdo-auto-offer/SKILL.md": "6719626263af2fab118c2a999920ec099fe9c02a2d74e8cce63558344ac9efdf",
+    "skills/youdo-daily-report/SKILL.md": "c6a8e1cc93018ac67f5f43ac6effd089184f0f4958f890155060394670fed4cf",
+    "skills/youdo-opportunity-scout/SKILL.md": "68dcfa49caddcf07cfe767636f421d782c89ed2473a3f48f8b7ee6ff250c3a5e",
+    "state/auto-offer-policy.json": "da5a5ad669f434c1b1e6c3719f41a0610d40d133eaaffb45d73e8859f8b14f9d"
+  },
+  "revision": "youdo-sla-20260824-v28",
+  "schema_version": 1,
+  "source_commit": "9d907d1a453cdd3c2a193495df9110f38d28e020"
+}
