@@ -44,6 +44,8 @@ view=$(/usr/bin/jq -c '
             category: category(.),
             funnel,
             funnel_label: (.funnel | funnel_label),
+            project_path,
+            correspondence,
             updated_at
           })
       )

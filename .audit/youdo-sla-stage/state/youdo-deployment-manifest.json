@@ -1,12 +1,15 @@
 {
   "artifacts": {
     "cli": "83c67b6de25e36fdd6eb1de176b7d5c18568aa6c6c5792b1a27747b3e72c95bc",
+    "scripts/attach-youdo-correspondence.zsh": "709d466486d3575cc7465fa0cf2429db683a092996a1f7cb282d13d39f95d7fa",
     "scripts/build-youdo-daily-report-input.zsh": "0f27ebb7eaca9ec7cef4dcd392faafc287fc95a69a42a8c501d59c02b7ab5352",
     "scripts/capture-youdo-offer-position.zsh": "4bc19e61ca56a84e99f3cd2211665e62e4fac3653be976bb2009b7d68718494c",
+    "scripts/ensure-youdo-project.zsh": "fe1f2606bc9fb306316af69a7e7647c21dfada13d5b70766f4bfa9f84063bd7d",
     "scripts/finalize-youdo-sbr-offer.zsh": "814722da8756d700b4ab1290f5c32c99bb1be95a4c70abb64d4f451163da6535",
     "scripts/finish-youdo-monitor-run.zsh": "cd6f54c1645a0f4fff98586d28b9a84a6b91497b6b158c15afb7c0139e12fb1f",
+    "scripts/ingest-youdo-telecrawl.zsh": "b9c17296f250ce9b2ce82cc3e83add22c17dffc83dfe1abeb9cf36fb26745ef6",
     "scripts/reconcile-youdo-ambiguous.zsh": "f55b247a0a359590b1b978c42b287d577c84498ccbdf61ddb22b322614825fc6",
-    "scripts/record-youdo-crm-transition.zsh": "fbbfe674323853740afcfaa51cfca2ce9ed095f712086165620589da19fd7425",
+    "scripts/record-youdo-crm-transition.zsh": "f8475c5d33ec64d1694663543f87f599a0712b30dec558d54a52e2afe8e9740d",
     "scripts/record-youdo-outcome.zsh": "f074ed4628952b8dbbe844bacfbe22ac910be01354d66b702d850649a22fe1e3",
     "scripts/record-youdo-stage-timing.zsh": "5114f2a58e28c077be044ca595a9ed03f8889681d206bfe9d5cd79f87e42d7c5",
     "scripts/requeue-youdo-covered-payment-blocked.zsh": "77f8ddab7f0501516036446a7549f8de99dedd1efde11927bb48ce96e57c6c12",
@@ -16,17 +19,18 @@
     "scripts/scan-youdo-inbox.zsh": "1efb867dda8bcacc571032c159ebe35eee5a96b7e9ce95aa9a65969a966a9f07",
     "scripts/scan-youdo-new-tasks.zsh": "dc49e5fbab80ab7fc1573a9b504691565e0beabaa389c947251ccaf858b19753",
     "scripts/sync-youdo-crm.zsh": "0b0001e9b606866fb27a25924cdc7a9b8ccbaa7b946b4d932bc5ede1e96b11f6",
-    "scripts/verify-youdo-deployment.zsh": "5a231e82ea56e138e702087bbe8d7f5f610c8889f10237489cd838021d66df62",
+    "scripts/verify-youdo-deployment.zsh": "bbac33540c43da922a5728de321911cd4c12655ba01942ac741da66c44c2367f",
     "scripts/write-youdo-daily-report.zsh": "f464bf9ad4eeb47c810bf8805b15f760521fb8156c58839a18db82c36d3b1a9d",
-    "scripts/youdo-crm.zsh": "7371f27541285c9920c5a53d7695bc2a752f55ebe74a929b2aa3cd88cdf28cb3",
+    "scripts/youdo-crm.zsh": "4ed818bdfc3f7175ac9520f49b6f1a716cde870ff5ebadda765f43c3f809b828",
     "scripts/youdo-exec.zsh": "3eff09bf58a3c45978b8da90c3ddf37efd23bbe40d2c004cada890d9a60c0281",
     "scripts/youdo-sla-monitor.zsh": "5ca50bc6c42f29b684a9ecce73e022a13255626f968684aca21dc550cf827cd3",
     "skills/youdo-auto-offer/SKILL.md": "976186ff56ebb4d112188c126ff0599f84aee18ff5b0c87cf1936dfdb9c8ea90",
+    "skills/youdo-client-work/SKILL.md": "5ec6e90d26986361080c9ed48c36db91dfacf795ed43acb2ebe41dfa8410f55f",
     "skills/youdo-daily-report/SKILL.md": "c6a8e1cc93018ac67f5f43ac6effd089184f0f4958f890155060394670fed4cf",
     "skills/youdo-opportunity-scout/SKILL.md": "68dcfa49caddcf07cfe767636f421d782c89ed2473a3f48f8b7ee6ff250c3a5e",
     "state/auto-offer-policy.json": "da5a5ad669f434c1b1e6c3719f41a0610d40d133eaaffb45d73e8859f8b14f9d"
   },
-  "revision": "youdo-sla-20260824-v30",
+  "revision": "youdo-sla-20260825-v31",
   "schema_version": 1,
-  "source_commit": "3496480eb49b4195c71054683ab9bc1fbf06701a"
+  "source_commit": "1e00916d9270e67fcee317340131ddb38c0c7561"
 }

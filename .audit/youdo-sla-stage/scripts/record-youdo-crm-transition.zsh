@@ -49,6 +49,9 @@ fi
 
 current=$(/usr/bin/jq -r --arg id "$task_id" '.deals[$id].funnel' "$crm")
 if [[ $current == "$next_funnel" ]]; then
+  if [[ $next_funnel == in_progress || $next_funnel == done_paid ]]; then
+    YOUDO_CRM_LOCK_HELD=1 YOUDO_WORKSPACE="$workspace" "$workspace/scripts/ensure-youdo-project.zsh" "$task_id" >/dev/null
+  fi
   /usr/bin/jq -cn --arg task_id "$task_id" --arg funnel "$next_funnel" '{ok:true,task_id:$task_id,funnel:$funnel,idempotent:true}'
   exit 0
 fi
@@ -75,4 +78,9 @@ fi
 /bin/chmod 600 "$tmp_crm"
 /bin/mv "$tmp_crm" "$crm"
 tmp_crm=
+
+if [[ $next_funnel == in_progress || $next_funnel == done_paid ]]; then
+  YOUDO_CRM_LOCK_HELD=1 YOUDO_WORKSPACE="$workspace" "$workspace/scripts/ensure-youdo-project.zsh" "$task_id" >/dev/null
+fi
+
 /usr/bin/jq -cn --arg task_id "$task_id" --arg funnel "$next_funnel" '{ok:true,task_id:$task_id,funnel:$funnel,idempotent:false}'

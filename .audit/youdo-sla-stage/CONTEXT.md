@@ -27,3 +27,11 @@ _Avoid_: global profile switch, company name on every create
 **Offer timing**:
 A detected task in `state/youdo-task-timings.json`. Fields are `task_id`, `first_seen`, and a map of offer stages: detect, hydrate, tariff, create, verify, publish_confirm, chat_crm_sync. `detect_to_publish_s` is first_seen to publication confirm.
 _Avoid_: funnel state, poll interval
+
+**Correspondence**:
+Optional telecrawl archive attached to one Deal. Shape is `{chat_id, archive_path, fetched_at, source:"telecrawl"}`. Same chat ingested twice converges on one pointer. Files live under `state/correspondence/<task_id>/` until the Deal is taken, then under the project folder.
+_Avoid_: a second CRM, a wiki include-list, a parallel chat ledger
+
+**Project folder**:
+Working tree for a taken Deal. Created only when funnel becomes `in_progress`. Path is `projects/youdo/<task_id>/`. Recorded on the Deal as `project_path`. Taking the same task twice reuses that folder.
+_Avoid_: a folder for mere Отклик, a sibling `~/youdo-projects` tree
