@@ -29,7 +29,7 @@ A detected task in `state/youdo-task-timings.json`. Fields are `task_id`, `first
 _Avoid_: funnel state, poll interval
 
 **Correspondence**:
-Optional telecrawl archive attached to one Deal. Shape is `{chat_id, archive_path, fetched_at, source:"telecrawl"}`. Same chat ingested twice converges on one pointer. Files live under `state/correspondence/<task_id>/` until the Deal is taken, then under the project folder.
+Optional read-only telecrawl archive attached to one Deal. The human names a chat. Ingest finds it. Request shape is `{task_id?, chat_query}`. Pointer shape is `{chat_id, archive_path, fetched_at, source:"telecrawl"}`. Same resolved chat attaches once. Files live under `state/correspondence/<task_id>/` until the Deal is taken, then under the project folder.
 _Avoid_: a second CRM, a wiki include-list, a parallel chat ledger
 
 **Project folder**:

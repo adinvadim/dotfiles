@@ -1,11 +1,11 @@
 ---
 name: youdo-client-work
-description: "Ship a taken YouDo job, archive a forwarded Telegram chat, or open its project folder."
+description: "Ship a taken YouDo job, archive a named Telegram chat, or open its project folder."
 ---
 
 # Client work
 
-Use this when a Deal is taken or the human forwards client correspondence. Hunt and offer stay in `youdo-auto-offer`. YouDo client chat send still needs exact GO.
+Use this when a Deal is taken or the human names a client Telegram chat. Hunt and offer stay in `youdo-auto-offer`. `message` talks to Vadim only. Client Telegram and YouDo client chat stay read-only.
 
 ## 1. Locate the Deal
 
@@ -13,19 +13,20 @@ Read `state/youdo-crm.json`. Key is `task_id`. Funnel labels are Отклик, �
 
 Done when the Deal exists. If it does not, run `scripts/sync-youdo-crm.zsh` once and stop if still missing.
 
-## 2. Archive forwarded correspondence
+## 2. Find the named chat and archive it
 
-Human forwards the client chat into Telegram Desktop. Do not invent a chat id. Do not sweep all dialogs.
+Human sends the chat name (`название`). Find it. Prefer an explicit YouDo `task_id` when the human also sent one.
 
 ```bash
-/Users/mini/.local/bin/telecrawl version
-/Users/mini/.local/bin/telecrawl --json doctor
-scripts/ingest-youdo-telecrawl.zsh <task_id> <chat_id>
+/Users/mini/.local/bin/telecrawl --json chats --limit 5000
+scripts/ingest-youdo-telecrawl.zsh --query '<название>' --task-id <task_id>
 ```
+
+Exact title wins. One substring match is enough. Zero matches stop. Two or more matches stop and list `{jid,name}` candidates to Vadim via `message`. `--chat-id` is an escape hatch only.
 
 `--skip-import` only when the chat is already in `~/.telecrawl` and the human said not to import.
 
-Done when stdout has `ok=true` and the Deal has `correspondence.archive_path`. Same chat ingested twice keeps one pointer. Отклик may move to Получено сообщение. No second CRM card.
+Done when stdout has `ok=true` and the Deal has `correspondence.archive_path`. Same resolved chat attaches once. Отклик may move to Получено сообщение. No second CRM card. Folder still only after `Взято в работу`.
 
 ## 3. Open the project folder
 
