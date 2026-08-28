@@ -76,16 +76,14 @@ def send(message):
     body = urlencode(
         {
             "chat_id": chat_id,
-            "text": message,
-            "parse_mode": "Markdown",
-            "disable_web_page_preview": "true",
+            "rich_message": json.dumps({"markdown": message}, ensure_ascii=False),
         }
     )
     connection = http.client.HTTPSConnection("api.telegram.org", timeout=15)
     try:
         connection.request(
             "POST",
-            f"/bot{token}/sendMessage",
+            f"/bot{token}/sendRichMessage",
             body=body,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
