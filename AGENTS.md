@@ -46,8 +46,6 @@
 - Docs: read repo docs before coding (docs-list command); update docs/changelog for user-visible behavior changes.
 - Inline code comments: brief notes for tricky, bug-prone, or previously buggy logic.
 - New deps: quick health check for recent releases/commits/adoption.
-- Never start a dev server unless the user explicitly asks.
-
 ## PR / CI
 
 - Before opening or updating a PR, run the repository's typecheck, lint, and test gates with its configured runner or package scripts.
