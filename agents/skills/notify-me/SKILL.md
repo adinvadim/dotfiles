@@ -7,24 +7,14 @@ disable-model-invocation: true
 
 # Notify me
 
-Send Telegram notifications only because the user explicitly invoked this skill in the current prompt. The invocation text defines what to send and, when attached to a longer task, which events should trigger a message.
+Treat the invocation text as the notification policy for the current task. A direct message sends once. A condition such as "on every problem" sends once for each newly observed problem, when it happens.
 
-For a direct message, send it once. For an event policy such as "on every problem", send one notification as soon as each distinct event is observed. Do not repeat an unchanged event. A resolved event that later recurs is distinct.
-
-Write a concise, self-contained notification with the target or environment, the observed event, the strongest available evidence, and the action being taken. Keep it under Telegram's 4096-character limit. Redact credentials, tokens, cookies, personal data, and secret-bearing command output.
-
-Pass the message on standard input so shell expansion cannot alter observed text:
+Send concise, self-contained text and redact secrets:
 
 ```sh
-python3 ~/.agents/skills/notify-me/scripts/notify.py <<'NOTIFY_ME_MESSAGE'
-Production checkout: elevated 5xx rate reached 8.2% at 14:32 UTC. Investigating the API deployment now.
-NOTIFY_ME_MESSAGE
+python3 ~/.agents/skills/notify-me/scripts/notify.py <<'NOTIFY'
+<message>
+NOTIFY
 ```
 
-The command is complete only when it prints `Telegram notification sent`. If delivery fails, report the sanitized error in the main conversation and continue the owning task unless successful notification delivery is its completion condition.
-
-Configuration lives in `~/.env/.secrets`. When it is missing or invalid, ask the user to run this locally before retrying:
-
-```sh
-python3 ~/.agents/skills/notify-me/scripts/setup.py
-```
+Delivery is complete when the command prints `Telegram notification sent`. On a configuration error, ask the user to run `python3 ~/.agents/skills/notify-me/scripts/notify.py --setup` locally.

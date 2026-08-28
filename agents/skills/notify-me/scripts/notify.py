@@ -1,175 +1,110 @@
 #!/usr/bin/env python3
-"""Send one Telegram notification without exposing its credentials."""
-
-from __future__ import annotations
+"""Configure or send a Telegram notification."""
 
 import argparse
+import getpass
 import http.client
 import json
-import os
 from pathlib import Path
-import re
-import stat
 import sys
-from typing import Callable, Dict, Optional, Sequence, Tuple
+import tempfile
 from urllib.parse import urlencode
 
 
-DEFAULT_SECRETS_FILE = Path.home() / ".env" / ".secrets"
-BOT_TOKEN_KEY = "TELEGRAM_BOT_TOKEN"
-CHAT_ID_KEY = "TELEGRAM_CHAT_ID"
-MAX_MESSAGE_LENGTH = 4096
-TOKEN_RE = re.compile(r"^\d+:[A-Za-z0-9_-]{20,}$")
-CHAT_ID_RE = re.compile(r"^-?\d+$")
-ENV_LINE_RE = re.compile(r"^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
+SECRETS = Path.home() / ".env" / ".secrets"
+BOT_TOKEN = "TELEGRAM_BOT_TOKEN"
+CHAT_ID = "TELEGRAM_CHAT_ID"
 
 
-class NotifyError(RuntimeError):
-    pass
+def fail(message):
+    raise SystemExit(f"notify-me: {message}")
 
 
-def parse_secrets(contents: str) -> Dict[str, str]:
-    values: Dict[str, str] = {}
-    for line_number, raw_line in enumerate(contents.splitlines(), start=1):
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        match = ENV_LINE_RE.match(line)
-        if not match:
-            raise NotifyError(f"invalid secrets syntax on line {line_number}; expected KEY=value")
-        key, value = match.groups()
-        if key in values:
-            raise NotifyError(f"duplicate key {key} in secrets file")
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-            value = value[1:-1]
-        values[key] = value
+def env_key(line):
+    return line.partition("=")[0].removeprefix("export ").strip()
+
+
+def parse_secrets(contents):
+    values = {}
+    for line in contents.splitlines():
+        _, separator, value = line.partition("=")
+        key = env_key(line)
+        if separator and key in {BOT_TOKEN, CHAT_ID}:
+            value = value.strip()
+            if len(value) > 1 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
+            values[key] = value
     return values
 
 
-def validate_config(bot_token: str, chat_id: str) -> Tuple[str, str]:
-    if not TOKEN_RE.fullmatch(bot_token):
-        raise NotifyError(f"{BOT_TOKEN_KEY} is not a Telegram BotFather token")
-    if not CHAT_ID_RE.fullmatch(chat_id):
-        raise NotifyError(f"{CHAT_ID_KEY} must be a numeric Telegram chat id")
-    return bot_token, chat_id
+def configure():
+    token = getpass.getpass("Telegram BotFather token: ").strip()
+    chat_id = input("Telegram numeric chat id: ").strip()
+    if not token or not chat_id:
+        fail("both values are required")
+
+    existing = SECRETS.read_text(encoding="utf-8").splitlines() if SECRETS.exists() else []
+    keys = {BOT_TOKEN, CHAT_ID}
+    preserved = [line for line in existing if env_key(line) not in keys]
+    contents = "\n".join(preserved + [f"{BOT_TOKEN}={token}", f"{CHAT_ID}={chat_id}"]) + "\n"
+
+    SECRETS.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile("w", dir=SECRETS.parent, delete=False) as temporary:
+        temporary.write(contents)
+        temporary_path = Path(temporary.name)
+    temporary_path.chmod(0o600)
+    temporary_path.replace(SECRETS)
+    print(f"Saved Telegram credentials to {SECRETS} with mode 0600.")
 
 
-def load_config(path: Path = DEFAULT_SECRETS_FILE) -> Tuple[str, str]:
-    if path.is_symlink():
-        raise NotifyError(f"refusing symlinked secrets file: {path}")
-    try:
-        file_stat = path.stat()
-    except FileNotFoundError as exc:
-        raise NotifyError(f"secrets file not found: {path}") from exc
-    if not stat.S_ISREG(file_stat.st_mode):
-        raise NotifyError(f"secrets path is not a regular file: {path}")
-    if hasattr(os, "getuid") and file_stat.st_uid != os.getuid():
-        raise NotifyError(f"secrets file is not owned by the current user: {path}")
-    if stat.S_IMODE(file_stat.st_mode) & 0o077:
-        raise NotifyError(f"secrets file permissions are too open; run: chmod 600 {path}")
-
-    values = parse_secrets(path.read_text(encoding="utf-8"))
-    missing = [key for key in (BOT_TOKEN_KEY, CHAT_ID_KEY) if not values.get(key)]
-    if missing:
-        raise NotifyError(f"missing {', '.join(missing)} in {path}")
-    return validate_config(values[BOT_TOKEN_KEY], values[CHAT_ID_KEY])
+def load_credentials():
+    if not SECRETS.exists():
+        fail(f"missing {SECRETS}; run notify.py --setup")
+    if SECRETS.stat().st_mode & 0o077:
+        fail(f"permissions are too open; run chmod 600 {SECRETS}")
+    values = parse_secrets(SECRETS.read_text(encoding="utf-8"))
+    if not values.get(BOT_TOKEN) or not values.get(CHAT_ID):
+        fail(f"missing {BOT_TOKEN} or {CHAT_ID} in {SECRETS}")
+    return values[BOT_TOKEN], values[CHAT_ID]
 
 
-def validate_message(message: str) -> str:
-    message = message.strip()
-    if not message:
-        raise NotifyError("notification message is empty")
-    if len(message) > MAX_MESSAGE_LENGTH:
-        raise NotifyError(
-            f"notification is {len(message)} characters; Telegram allows {MAX_MESSAGE_LENGTH}"
-        )
-    return message
-
-
-def send_notification(
-    bot_token: str,
-    chat_id: str,
-    message: str,
-    *,
-    timeout: float = 15,
-    connection_factory: Callable[..., http.client.HTTPSConnection] = http.client.HTTPSConnection,
-) -> Optional[int]:
-    payload = urlencode(
-        {
-            "chat_id": chat_id,
-            "text": validate_message(message),
-            "disable_web_page_preview": "true",
-        }
-    )
-    connection = connection_factory("api.telegram.org", timeout=timeout)
+def send(message):
+    token, chat_id = load_credentials()
+    body = urlencode({"chat_id": chat_id, "text": message})
+    connection = http.client.HTTPSConnection("api.telegram.org", timeout=15)
     try:
         connection.request(
             "POST",
-            f"/bot{bot_token}/sendMessage",
-            body=payload,
+            f"/bot{token}/sendMessage",
+            body=body,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
         response = connection.getresponse()
-        response_body = response.read()
-    except OSError as exc:
-        raise NotifyError(f"Telegram connection failed: {exc}") from exc
+        result = json.loads(response.read())
+    except (OSError, ValueError) as error:
+        fail(f"Telegram request failed: {type(error).__name__}")
     finally:
         connection.close()
 
-    try:
-        decoded = json.loads(response_body.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise NotifyError(f"Telegram returned HTTP {response.status} with an invalid response") from exc
-
-    if response.status < 200 or response.status >= 300 or decoded.get("ok") is not True:
-        description = decoded.get("description")
-        detail = description if isinstance(description, str) else "request rejected"
-        raise NotifyError(f"Telegram returned HTTP {response.status}: {detail}")
-
-    result = decoded.get("result")
-    message_id = result.get("message_id") if isinstance(result, dict) else None
-    return message_id if isinstance(message_id, int) else None
+    if not isinstance(result, dict):
+        fail("Telegram returned an invalid response")
+    if result.get("ok") is not True:
+        fail(result.get("description", "Telegram rejected the message"))
+    print("Telegram notification sent.")
 
 
-def read_message(args: argparse.Namespace) -> str:
-    if args.message is not None:
-        return validate_message(args.message)
-    if args.message_file is not None:
-        try:
-            return validate_message(args.message_file.read_text(encoding="utf-8"))
-        except OSError as exc:
-            raise NotifyError(f"cannot read message file: {args.message_file}") from exc
-    if sys.stdin.isatty():
-        raise NotifyError("pass --message, --message-file, or pipe the message on standard input")
-    return validate_message(sys.stdin.read())
-
-
-def build_parser() -> argparse.ArgumentParser:
+def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--secrets-file", type=Path, default=DEFAULT_SECRETS_FILE)
-    parser.add_argument("--check", action="store_true", help="validate credentials without sending")
-    message = parser.add_mutually_exclusive_group()
-    message.add_argument("--message")
-    message.add_argument("--message-file", type=Path)
-    return parser
-
-
-def main(argv: Optional[Sequence[str]] = None) -> int:
-    args = build_parser().parse_args(argv)
-    try:
-        bot_token, chat_id = load_config(args.secrets_file)
-        if args.check:
-            print("Telegram notification configuration is valid.")
-            return 0
-        message_id = send_notification(bot_token, chat_id, read_message(args))
-    except NotifyError as exc:
-        print(f"notify-me: {exc}", file=sys.stderr)
-        return 1
-
-    suffix = f" (message_id={message_id})" if message_id is not None else ""
-    print(f"Telegram notification sent{suffix}.")
-    return 0
+    parser.add_argument("--setup", action="store_true")
+    args = parser.parse_args()
+    if args.setup:
+        configure()
+        return
+    message = sys.stdin.read().strip()
+    if not message:
+        fail("pass the message on standard input")
+    send(message)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
