@@ -14,6 +14,7 @@ from urllib.parse import urlencode
 SECRETS = Path.home() / ".env" / ".secrets"
 BOT_TOKEN = "TELEGRAM_BOT_TOKEN"
 CHAT_ID = "TELEGRAM_CHAT_ID"
+MAX_MESSAGE_LENGTH = 800
 
 
 def fail(message):
@@ -69,8 +70,17 @@ def load_credentials():
 
 
 def send(message):
+    if len(message) > MAX_MESSAGE_LENGTH:
+        fail(f"message exceeds {MAX_MESSAGE_LENGTH} characters")
     token, chat_id = load_credentials()
-    body = urlencode({"chat_id": chat_id, "text": message})
+    body = urlencode(
+        {
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "Markdown",
+            "disable_web_page_preview": "true",
+        }
+    )
     connection = http.client.HTTPSConnection("api.telegram.org", timeout=15)
     try:
         connection.request(

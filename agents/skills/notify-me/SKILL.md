@@ -9,11 +9,12 @@ disable-model-invocation: true
 
 Treat the invocation text as the notification policy for the current task. A direct message sends once. A condition such as "on every problem" sends once for each newly observed problem, when it happens.
 
-Send concise, self-contained text and redact secrets:
+Keep each notification under 800 characters. Start with one useful status emoji such as 🚨, ⚠️, ✅, or ℹ️, then a short title and at most three brief lines. Use Telegram Markdown sparingly for `*bold*`, inline `code`, or a link. Redact secrets.
 
 ```sh
 python3 ~/.agents/skills/notify-me/scripts/notify.py <<'NOTIFY'
-<message>
+🚨 *Production problem*
+API errors reached `8.2%`. Checking the latest deployment.
 NOTIFY
 ```
 
