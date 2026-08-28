@@ -100,6 +100,9 @@
     ~/.agents/skills/implement: agents/skills/implement
     ~/.codex/skills/implement: agents/skills/implement
     ~/.claude/skills/implement: agents/skills/implement
+    ~/.agents/skills/notify-me: agents/skills/notify-me
+    ~/.codex/skills/notify-me: agents/skills/notify-me
+    ~/.claude/skills/notify-me: agents/skills/notify-me
     ~/.agents/skills/grill-with-paper: agents/skills/grill-with-paper
     ~/.codex/skills/grill-with-paper: agents/skills/grill-with-paper
     ~/.claude/skills/grill-with-paper: agents/skills/grill-with-paper
