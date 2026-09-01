@@ -19,6 +19,7 @@ def metadata() -> dict[str, object]:
         "state": "OPEN",
         "headRefOid": HEAD,
         "reviewDecision": None,
+        "viewerLogin": "maintainer",
     }
 
 
@@ -50,6 +51,79 @@ def finding_thread(*, resolved: bool, outdated: bool) -> dict[str, object]:
 
 
 class ReviewCensusTests(unittest.TestCase):
+    def test_conversation_change_request_prevents_false_clear(self) -> None:
+        report = analyze_census(
+            metadata=metadata(),
+            threads=[],
+            reviews=[],
+            issue_comments=[
+                {
+                    "author": {"login": "codex-reviewer"},
+                    "body": "[P1] Please preserve the late-rule evaluation.",
+                    "createdAt": "2026-09-01T06:00:00Z",
+                    "url": "https://example.test/conversation-finding",
+                }
+            ],
+            checks=[{"name": "CI", "state": "SUCCESS", "bucket": "pass"}],
+        )
+
+        self.assertFalse(report["ready"])
+        self.assertEqual(report["conversationComments"]["outstanding"], 1)
+        finding = report["conversationComments"]["items"][0]
+        self.assertEqual(finding["author"], "codex-reviewer")
+        self.assertIsNone(finding["cleanOnHead"])
+
+    def test_current_head_clean_comment_clears_conversation_finding(self) -> None:
+        report = analyze_census(
+            metadata=metadata(),
+            threads=[],
+            reviews=[],
+            issue_comments=[
+                {
+                    "author": {"login": "codex-reviewer"},
+                    "body": "Please preserve the late-rule evaluation.",
+                    "createdAt": "2026-09-01T06:00:00Z",
+                    "url": "https://example.test/conversation-finding",
+                },
+                {
+                    "author": {"login": "codex-reviewer"},
+                    "body": (
+                        "Codex Review: Didn't find any major issues.\n\n"
+                        "**Reviewed commit:** `d09bb99861`"
+                    ),
+                    "createdAt": "2026-09-01T07:00:00Z",
+                    "url": "https://example.test/conversation-clean",
+                },
+            ],
+            checks=[{"name": "CI", "state": "SUCCESS", "bucket": "pass"}],
+        )
+
+        self.assertTrue(report["ready"])
+        self.assertEqual(report["conversationComments"]["outstanding"], 0)
+        self.assertEqual(
+            report["conversationComments"]["items"][0]["cleanOnHead"]["url"],
+            "https://example.test/conversation-clean",
+        )
+
+    def test_own_conversation_comment_is_not_a_finding(self) -> None:
+        report = analyze_census(
+            metadata=metadata(),
+            threads=[],
+            reviews=[],
+            issue_comments=[
+                {
+                    "author": {"login": "maintainer"},
+                    "body": "Please review the updated implementation.",
+                    "createdAt": "2026-09-01T06:00:00Z",
+                    "url": "https://example.test/own-comment",
+                }
+            ],
+            checks=[{"name": "CI", "state": "SUCCESS", "bucket": "pass"}],
+        )
+
+        self.assertTrue(report["ready"])
+        self.assertEqual(report["conversationComments"]["total"], 0)
+
     def test_accepts_explicit_clean_evidence_on_the_current_head(self) -> None:
         report = analyze_census(
             metadata=metadata(),
