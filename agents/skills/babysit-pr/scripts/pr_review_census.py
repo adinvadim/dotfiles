@@ -60,7 +60,9 @@ _CLEAN_PHRASES = re.compile(
 )
 _FINDING_PHRASES = re.compile(
     r"(?:\[P[0-3]\]|\b(?:please|must|should|needs? to|fix|change|remove|add|"
-    r"update|rename|avoid|ensure|could you|can you)\b)",
+    r"update|rename|avoid|ensure|could you|can you)\b|"
+    r"\b(?:this|that|it)\s+(?:drops?|loses?|breaks?|duplicates?|leaks?|"
+    r"bypasses?|ignores?|misses?)\b)",
     re.IGNORECASE,
 )
 _REVIEWED_COMMIT = re.compile(

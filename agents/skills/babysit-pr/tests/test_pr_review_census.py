@@ -73,6 +73,25 @@ class ReviewCensusTests(unittest.TestCase):
         self.assertEqual(finding["author"], "codex-reviewer")
         self.assertIsNone(finding["cleanOnHead"])
 
+    def test_declarative_conversation_finding_prevents_false_clear(self) -> None:
+        report = analyze_census(
+            metadata=metadata(),
+            threads=[],
+            reviews=[],
+            issue_comments=[
+                {
+                    "author": {"login": "human-reviewer"},
+                    "body": "This drops the late rule when configuration changes.",
+                    "createdAt": "2026-09-01T06:00:00Z",
+                    "url": "https://example.test/declarative-finding",
+                }
+            ],
+            checks=[{"name": "CI", "state": "SUCCESS", "bucket": "pass"}],
+        )
+
+        self.assertFalse(report["ready"])
+        self.assertEqual(report["conversationComments"]["outstanding"], 1)
+
     def test_current_head_clean_comment_clears_conversation_finding(self) -> None:
         report = analyze_census(
             metadata=metadata(),
