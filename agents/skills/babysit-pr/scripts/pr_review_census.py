@@ -58,9 +58,18 @@ _CLEAN_PHRASES = re.compile(
     r"(?:didn['’]t find any (?:major )?issues|no (?:major )?issues|no findings|\blgtm\b|looks good to me)",
     re.IGNORECASE,
 )
+_FINDING_PHRASES = re.compile(
+    r"(?:\[P[0-3]\]|\b(?:please|must|should|needs? to|fix|change|remove|add|"
+    r"update|rename|avoid|ensure|could you|can you)\b)",
+    re.IGNORECASE,
+)
 _REVIEWED_COMMIT = re.compile(
     r"reviewed commit:\*{0,2}\s*`?([0-9a-f]{7,40})`?", re.IGNORECASE
 )
+
+
+def _is_finding_text(body: str) -> bool:
+    return not _CLEAN_PHRASES.search(body) and bool(_FINDING_PHRASES.search(body))
 
 
 def _clean_evidence(
@@ -203,6 +212,23 @@ def analyze_census(
             }
         )
 
+    viewer_login = _optional_string(meta.get("viewerLogin"))
+    conversation_findings: list[dict[str, Any]] = []
+    for raw_comment in issue_comments:
+        comment = _comment_summary(raw_comment, "issue comment")
+        if comment["author"] == viewer_login or not _is_finding_text(
+            comment["body"]
+        ):
+            continue
+        clean = _latest_clean(clean_evidence, comment["author"], comment["at"])
+        conversation_findings.append(
+            {
+                **comment,
+                "cleanOnHead": clean,
+                "outstanding": clean is None,
+            }
+        )
+
     normalized_checks: list[dict[str, Any]] = []
     buckets: Counter[str] = Counter()
     for raw_check in checks:
@@ -224,10 +250,14 @@ def analyze_census(
     outstanding_change_requests = sum(
         int(item["outstanding"]) for item in change_requests
     )
+    outstanding_conversation_comments = sum(
+        int(item["outstanding"]) for item in conversation_findings
+    )
     ready = (
         meta.get("state") == "OPEN"
         and outstanding_threads == 0
         and outstanding_change_requests == 0
+        and outstanding_conversation_comments == 0
         and truncated_threads == 0
         and ci_ready
     )
@@ -253,6 +283,11 @@ def analyze_census(
             "total": len(change_requests),
             "outstanding": outstanding_change_requests,
             "items": change_requests,
+        },
+        "conversationComments": {
+            "total": len(conversation_findings),
+            "outstanding": outstanding_conversation_comments,
+            "items": conversation_findings,
         },
         "ci": {
             "ready": ci_ready,
@@ -436,6 +471,8 @@ def collect_census(
     client: GhClient, selector: str | None, repository: str | None
 ) -> dict[str, Any]:
     metadata, owner, name = _resolve_target(client, selector, repository)
+    viewer = _object(client.run_json(["api", "user"]), "viewer")
+    metadata["viewerLogin"] = _string(viewer.get("login"), "viewer.login")
     number = metadata.get("number")
     if not isinstance(number, int) or number <= 0:
         raise CensusError("metadata.number must be a positive integer")
@@ -518,6 +555,13 @@ def render_text(report: dict[str, Any]) -> str:
     )
     lines.append(
         f"change requests awaiting confirmation: {change_requests['outstanding']}"
+    )
+    conversation_comments = _object(
+        report.get("conversationComments"), "report.conversationComments"
+    )
+    lines.append(
+        "conversation findings awaiting confirmation: "
+        f"{conversation_comments['outstanding']}"
     )
     lines.append("CLEAR" if report.get("ready") is True else "NOT CLEAR")
     return "\n".join(lines)
