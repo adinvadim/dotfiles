@@ -14,6 +14,10 @@ Work on the PR head with a clean tree. Identify the PR from the argument or `gh 
 
 ## 1 — Census
 
+Run `scripts/pr-review-census [PR]` from this skill for one evidence report;
+add `--wait` to poll until review confirmation and CI are clear. Exit `0` means
+clear, `1` means evidence is still outstanding, and `2` means collection failed.
+
 Collect every finding:
 
 - unresolved `reviewThreads` (GraphQL) — `gh pr view` and conversation comments miss these
