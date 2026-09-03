@@ -64,6 +64,7 @@
 - After landing: checkout `main`, pull `--ff-only`, verify `git status -sb`, then final.
 - PR fixups from repo cwd: use that checkout. No worktrees unless asked; if awkward, ask.
 - Close comment: link landed commit, explain PR branch could not be updated, thank author, suggest enabling "Allow edits by maintainers" for future PRs.
+- PR body drafting/updating: use `$show-me` for visuals (call trees, diffs, Mermaid) where a picture beats prose.
 - PR evidence for UI changes: attach before/after images (short video for motion) to the PR body with `$github-image-upload` — `gh image <files>` prints a private-scoped `user-attachments` URL to paste in. `gh` itself has no attach.
 - Never add "Generated with Claude Code" or similar attribution to PR descriptions.
 

@@ -138,6 +138,9 @@
     ~/.agents/skills/babysit-pr: agents/skills/babysit-pr
     ~/.codex/skills/babysit-pr: agents/skills/babysit-pr
     ~/.claude/skills/babysit-pr: agents/skills/babysit-pr
+    ~/.agents/skills/show-me: agents/skills/show-me
+    ~/.codex/skills/show-me: agents/skills/show-me
+    ~/.claude/skills/show-me: agents/skills/show-me
     ~/.claude/skills/codex-computer-use/SKILL.md: agents/skills/codex-computer-use/SKILL.md
 
 - create:
