@@ -7,7 +7,8 @@ export PATH=$HOME/bin:$PATH
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
-export JAVA_HOME="/opt/homebrew/opt/openjdk"
+export JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"
 export N_PREFIX=$HOME/.n
 export PATH="$N_PREFIX/bin:$PATH"
 [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
@@ -75,6 +76,7 @@ RPS1=''
 export PATH="${HOME}/.pyenv/shims:${PATH}"
 
 export ANDROID_HOME=$HOME/Library/Android/sdk
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export PATH=$PATH:$ANDROID_HOME/emulator
 export PATH=$PATH:$ANDROID_HOME/platform-tools
 
@@ -135,8 +137,6 @@ tmuxbu() {
 }
 
 alias tmxbu="tmuxbu"
-export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
-
 # pnpm
 export PNPM_HOME="/Users/comp/Library/pnpm"
 case ":$PATH:" in
@@ -144,7 +144,6 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
-export PATH="/opt/homebrew/opt/openjdk@11/bin:$PATH"
 
 # The next line updates PATH for CLI.
 if [ -f '/Users/comp/yandex-cloud/path.bash.inc' ]; then source '/Users/comp/yandex-cloud/path.bash.inc'; fi
