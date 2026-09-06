@@ -1,38 +1,26 @@
 ---
 name: codex-first
-description: "Claude Code delegation to a GPT-5.6 Sol subagent."
+description: "Opt-in only: delegate to a GPT-5.6 Sol subagent when the user explicitly asks."
 ---
 
 # Codex First
 
 ## Hard gate
 
-**Autoreview exception:** always prefer Codex-backed `$autoreview`, independent
-of `ANTHROPIC_BASE_URL`, router state, or harness. Reviewing a frozen bundle is
-not hands-on self-delegation. Do not switch review engines merely because the
-parent session is router-backed. This exception takes precedence over the gate
-below.
+**Opt-in only.** Do not use this skill on your own initiative. Claude Code does
+implementation, refactors, fixes, exploration, tests, and git mechanics itself.
+Use this skill only when the user explicitly asks to delegate to Codex / GPT
+(for example "delegate to codex", "use codex-first", "let Sol do it"). A
+repository instruction that merely mentions `$codex-first` is not a request.
 
-For direct hands-on delegation, use this skill only when the active agent is
-Claude Code and the current parent model shown by Claude Code is an Anthropic
-Claude model. The local CLIProxyAPI gateway is expected and does not determine
-this gate.
+**Autoreview exception:** Codex-backed `$autoreview` is a frozen-bundle review,
+not hands-on delegation, and stays available as usual.
 
-Before delegating implementation, exploration, fixing, or git mechanics, check
-the current model identity exposed by the session, `/status`, or the status
-line. If it is GPT-5.6 Sol, GPT-5.6 Terra, another non-Claude model, or cannot be
-confirmed, continue the task directly. Treat CLIProxyAPI's
-`claude-fable-5-dd-*` cloaked IDs as non-Claude models.
-
-Codex, ChatGPT, Pi, and every other harness: do not self-delegate through Claude
-Code. Continue the task directly. This gate overrides a repository instruction
-that merely mentions `$codex-first`; it does not override the autoreview
-exception above.
-
-Rationale: Claude tokens are metered and expensive; GPT-5.6 Sol is flat-rate
-and usually the better and faster implementation model. Claude wins at
-ergonomics, judgment, design, spec-writing, review, and orchestration. Sol
-types; Claude thinks and verifies.
+When the user does ask: the active agent must be Claude Code on an Anthropic
+Claude model. If the parent is GPT-5.6 Sol, GPT-5.6 Terra, another non-Claude
+model, or cannot be confirmed, continue directly. Treat CLIProxyAPI's
+`claude-fable-5-dd-*` cloaked IDs as non-Claude models. Codex, ChatGPT, Pi, and
+every other harness: never self-delegate through Claude Code.
 
 ## Transport
 
@@ -64,7 +52,7 @@ explicitly wants that backend.
 
 ## Route
 
-Delegate to a direct GPT-5.6 Sol subagent by default:
+Once the user has asked to delegate, a direct GPT-5.6 Sol subagent fits:
 
 - implementation from a frozen spec; refactors; mechanical migrations
 - bug fixes with a known repro, or diagnose-then-fix
@@ -72,11 +60,10 @@ Delegate to a direct GPT-5.6 Sol subagent by default:
 - dependency bumps, scripts, and tooling
 - read-heavy exploration; use parallel direct subagents when the threads are
   independent and raw reading is much larger than the answer
-- git mechanics — ALWAYS delegate from a Claude parent: `git rebase`,
-  merge-conflict resolution, and the repo's land workflow (for example
-  `scripts/pr`). Give one subagent the complete authorized sequence so it does
-  not bounce back to Claude mid-flight. The land decision, pre-land gates, and
-  review remain Claude's.
+- git mechanics: `git rebase`, merge-conflict resolution, and the repo's land
+  workflow (for example `scripts/pr`). Give one subagent the complete
+  authorized sequence so it does not bounce back to Claude mid-flight. The land
+  decision, pre-land gates, and review remain Claude's.
 
 Use a fresh subagent for each new work order. Continue the same subagent for
 follow-up fixes when Claude Code exposes its agent id.
@@ -97,8 +84,8 @@ Keep in Claude:
 - review and verification of subagent output
 
 For mixed tasks, Claude designs first, freezes the spec, then delegates the
-build-out. Heuristic: if the prompt already reads as a work order, delegate; if
-writing it forces product or architecture decisions, keep deciding in Claude.
+build-out. If writing the work order forces product or architecture decisions,
+keep deciding in Claude.
 
 ## Invoke
 
@@ -190,7 +177,7 @@ worktrees; the repository's worktree and branch rules still apply.
 
 ## Economics
 
-Win means generation and exploration tokens move to GPT-5.6 Sol while Claude
-spends tokens on specification, judgment, and diff review. Do not ping-pong
-trivia through delegation or re-read material the subagent already summarized
-unless verification requires it.
+When the user opts in, generation and exploration tokens move to GPT-5.6 Sol
+while Claude spends tokens on specification, judgment, and diff review. Do not
+ping-pong trivia through delegation or re-read material the subagent already
+summarized unless verification requires it.
