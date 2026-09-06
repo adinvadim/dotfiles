@@ -62,9 +62,9 @@
     ~/bin/db: bin/db
     ~/bin/ohmydb: bin/ohmydb
     ~/bin/docs-list: bin/docs-list
-    ~/bin/codex-computer-use: bin/codex-computer-use
     ~/bin/cursor-agent-t3: bin/cursor-agent-t3
     ~/bin/firecrawl-mcp-setup: bin/firecrawl-mcp-setup
+    ~/bin/crabbox-cloudflare-setup: bin/crabbox-cloudflare-setup
     /opt/homebrew/share/zsh/site-functions/_db: bin/_db
     /opt/homebrew/share/zsh/site-functions/_ohmydb: bin/_ohmydb
     ~/.editorconfig: .editorconfig
@@ -91,9 +91,6 @@
     ~/.agents/skills/to-cli: agents/skills/to-cli
     ~/.codex/skills/to-cli: agents/skills/to-cli
     ~/.claude/skills/to-cli: agents/skills/to-cli
-    ~/.agents/skills/code-simplifier: agents/skills/code-simplifier
-    ~/.codex/skills/code-simplifier: agents/skills/code-simplifier
-    ~/.claude/skills/code-simplifier: agents/skills/code-simplifier
     ~/.agents/skills/walk-map: agents/skills/walk-map
     ~/.codex/skills/walk-map: agents/skills/walk-map
     ~/.claude/skills/walk-map: agents/skills/walk-map
@@ -117,9 +114,6 @@
     ~/.agents/skills/next-human: agents/skills/next-human
     ~/.codex/skills/next-human: agents/skills/next-human
     ~/.claude/skills/next-human: agents/skills/next-human
-    ~/.agents/skills/codex-first: agents/skills/codex-first
-    ~/.codex/skills/codex-first: agents/skills/codex-first
-    ~/.claude/skills/codex-first: agents/skills/codex-first
     ~/.agents/skills/npm: agents/skills/npm
     ~/.codex/skills/npm: agents/skills/npm
     ~/.claude/skills/npm: agents/skills/npm
@@ -141,7 +135,6 @@
     ~/.agents/skills/show-me: agents/skills/show-me
     ~/.codex/skills/show-me: agents/skills/show-me
     ~/.claude/skills/show-me: agents/skills/show-me
-    ~/.claude/skills/codex-computer-use/SKILL.md: agents/skills/codex-computer-use/SKILL.md
 
 - create:
     - ~/.vim/undo-history

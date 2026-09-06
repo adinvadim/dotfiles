@@ -26,7 +26,6 @@
 
 ## Routing
 
-- Claude does the work itself: no delegation to Codex/GPT subagents by default. `$codex-first` only when the user explicitly asks to delegate.
 - Project database/Redis/S3 needed: use `ohmydb`.
 - Human-facing dev server (requested or for review): run via HTTPS Portless; set the stable name in the `package.json` `"portless"` key (fallback: `portless.json` only if impossible). Agent-only server: run normally.
 - Production access: first check for the target device in `tailscale status`.

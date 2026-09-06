@@ -1,6 +1,6 @@
 ---
 name: gpt-5.6-sol
-description: "GPT-5.6 Sol implementation worker via CLIProxyAPI. Use only when the user explicitly asks to delegate implementation, refactors, fixes, exploration, tests, or git mechanics to Codex."
+description: "GPT-5.6 Sol implementation worker via CLIProxyAPI. Use only when the user explicitly asks to delegate work to GPT-5.6 Sol."
 model: gpt-5.6-sol
 ---
 
