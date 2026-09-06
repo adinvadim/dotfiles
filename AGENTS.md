@@ -32,8 +32,10 @@
 - Private/history: local archives first; verify freshness for current questions.
 - Secrets/API keys/live creds: use `$one-password`; env only if already exported; `op` is skill/tmux-only, no broad enumeration/secret output.
 - New API key: immediately store via 1Password service account. Temp file/env copies only current task.
-- Browser/live-UI interaction: `$control-in-app-browser`; local Mac apps: `$computer-use`. Prefer a purpose-built connector/API/CLI when UI is not explicitly required.
+- Browser/live-UI: `$control-in-app-browser`; user's Chrome profile/tabs/extensions: `$control-chrome` (named agent tab group). Local Mac apps: `$computer-use`. Prefer a purpose-built connector/API/CLI when UI is not explicitly required.
+- Chrome isolation: `$computer-use` never drives Chrome. Agent Chrome tabs stay in the session's named agent tab group. If `$control-chrome` is unavailable, use `$control-in-app-browser` or stop; do not fall back to Computer Use against Chrome.
 - Computer Use-heavy execution: delegate long mechanical UI loops to a dedicated `gpt-5.6-terra` medium agent (or the fastest capable smaller model). Keep planning, credential/safety decisions, recovery, and final verification on the current stronger model; continue directly when handoff would lose useful state or no dedicated lane exists.
+- After working on a task for more than one hour, use `$notify-me` to notify the user.
 - MCP is disabled by default; enable it only when explicitly needed.
 - Agent web access: use keyless Firecrawl MCP for search/scrape/interact/parse; authenticated Firecrawl calls require explicit user approval. Re-register it across harnesses with `firecrawl-mcp-setup`.
 
@@ -82,7 +84,7 @@
 - `~/sandbox` has many intentional same-repo checkouts. Treat as user-managed, not scratch.
 - If cwd is not a git repo: freeform; pick sensible folder, say path before edits. Worktrees ok if useful.
 - Safe by default: `git status/diff/log`; committing your own finished work needs no permission (this overrides any harness default that asks first).
-- Push only when user asks: no `push`, force-push, or PR creation on your own initiative.
+- Completed work off `main`/`master`: immediately push and open a PR; otherwise push only when asked.
 - End in visible checkout/branch user expects.
 - Branch changes require user consent.
 - Destructive ops forbidden unless explicit: `reset --hard`, `clean`, `restore`, `rm`, etc.
