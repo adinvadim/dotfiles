@@ -11,6 +11,15 @@ transient-error-cooldown-seconds: -1
 # Expose only the models used by our Codex, Kimi Code, and xAI subscriptions.
 # CLIProxyAPI has exclusions but no allowlist; refresh after provider catalog upgrades.
 oauth-excluded-models:
+  claude:
+    # These legacy entries omit fields required by Codex 0.153 model discovery.
+    - "claude-3-7-sonnet-20250219"
+    - "claude-opus-4-20250514"
+    - "claude-sonnet-4-20250514"
+    - "claude-opus-4-1-20250805"
+    - "claude-haiku-4-5-20251001"
+    - "claude-opus-4-5-20251101"
+    - "claude-sonnet-4-5-20250929"
   codex:
     - "codex-auto-review"
     - "gpt-5.3-*"
@@ -30,6 +39,15 @@ oauth-excluded-models:
     - "kimi-k2-thinking"
     - "kimi-k2.5"
     - "kimi-k2.6"
+
+# Anthropic sometimes reports brief capacity spikes as 529. Treat those as
+# request-scoped so the Claude credential can retry without entering cooldown.
+oauth-request-scoped-errors:
+  claude:
+    - status: 529
+      match:
+        - "overloaded_error"
+      action: "continue"
 
 # Need CLIProxyAPI >= 7.2.111 for real `kimi-k3-256k` (256k K3, lower quota).
 # Do not alias it onto `kimi-k3` — that is the separate 1M model.
