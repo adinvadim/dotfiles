@@ -1,0 +1,356 @@
+#!/usr/bin/env bash
+# Configure Crabbox to run Linux jobs on Cloudflare Containers.
+# Idempotent: safe to re-run after adding Cloudflare credentials.
+set -euo pipefail
+
+ROOT="${CRABBOX_REPO:-$HOME/sandbox/oss/crabbox}"
+CONFIG_DIR="$HOME/Library/Application Support/crabbox"
+CONFIG_FILE="$CONFIG_DIR/config.yaml"
+SECRETS_FILE="$HOME/.secrets"
+STATE_FILE="$CONFIG_DIR/cloudflare.env"
+OP_ACCOUNT="${OP_ACCOUNT:-my.1password.com}"
+OP_STREAM_ITEM_ID="${OP_STREAM_ITEM_ID:-y5b7e4ikd7qk76fs6mibvg7are}"
+OP_WORKERS_ITEM_TITLE="${OP_WORKERS_ITEM_TITLE:-Cloudflare Workers API Token}"
+
+die() {
+  printf 'crabbox-cloudflare-setup: %s\n' "$*" >&2
+  exit 1
+}
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "missing command: $1"
+}
+
+ensure_repo() {
+  if [[ ! -d "$ROOT/.git" ]]; then
+    mkdir -p "$(dirname "$ROOT")"
+    git clone --depth 1 https://github.com/openclaw/crabbox.git "$ROOT"
+  fi
+}
+
+ensure_config() {
+  mkdir -p "$CONFIG_DIR"
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    cat >"$CONFIG_FILE" <<'EOF'
+provider: cloudflare
+target: linux
+class: standard
+cloudflare:
+  workdir: /workspace/crabbox
+EOF
+    chmod 600 "$CONFIG_FILE"
+  fi
+}
+
+ensure_runner_token() {
+  # shellcheck disable=SC1090
+  [[ -f "$STATE_FILE" ]] && source "$STATE_FILE"
+  if [[ -z "${CRABBOX_CLOUDFLARE_RUNNER_TOKEN:-}" ]]; then
+    CRABBOX_CLOUDFLARE_RUNNER_TOKEN="$(openssl rand -hex 32)"
+    umask 077
+    {
+      printf '# Crabbox Cloudflare runner (generated %s)\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      printf 'export CRABBOX_CLOUDFLARE_RUNNER_TOKEN=%q\n' "$CRABBOX_CLOUDFLARE_RUNNER_TOKEN"
+    } >>"$STATE_FILE"
+    chmod 600 "$STATE_FILE"
+    printf 'generated runner token in %s\n' "$STATE_FILE"
+  fi
+  export CRABBOX_CLOUDFLARE_RUNNER_TOKEN
+}
+
+ensure_secrets_hook() {
+  touch "$SECRETS_FILE"
+  chmod 600 "$SECRETS_FILE"
+  if ! rg -q 'cloudflare\.env' "$SECRETS_FILE" 2>/dev/null; then
+    cat >>"$SECRETS_FILE" <<EOF
+
+# Crabbox Cloudflare runner (managed by ~/bin/crabbox-cloudflare-setup)
+[[ -f "$STATE_FILE" ]] && source "$STATE_FILE"
+EOF
+  fi
+}
+
+ensure_docker() {
+  if docker info >/dev/null 2>&1; then
+    return 0
+  fi
+  if command -v colima >/dev/null 2>&1; then
+    if ! colima status >/dev/null 2>&1; then
+      colima stop >/dev/null 2>&1 || true
+      colima delete -f >/dev/null 2>&1 || true
+      colima start --cpu 4 --memory 8
+    fi
+    docker context use colima >/dev/null 2>&1 || true
+  fi
+  docker info >/dev/null 2>&1 || die "Docker daemon unavailable; start Docker Desktop or run: colima start"
+}
+
+op_read_field() {
+  local vault="$1" item="$2" label="$3" use_sa="${4:-0}"
+  local json
+  if [[ "$use_sa" == "1" ]]; then
+    # shellcheck disable=SC1090
+    [[ -f "$SECRETS_FILE" ]] && source "$SECRETS_FILE"
+    [[ -n "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]] || die "OP_SERVICE_ACCOUNT_TOKEN missing for Service Vault read"
+    json="$(OP_SERVICE_ACCOUNT_TOKEN="$OP_SERVICE_ACCOUNT_TOKEN" op item get "$item" --vault "$vault" --format json)"
+  else
+    op whoami --account "$OP_ACCOUNT" >/dev/null 2>&1 || op signin --account "$OP_ACCOUNT" >/dev/null
+    json="$(op item get "$item" --account "$OP_ACCOUNT" --vault "$vault" --format json)"
+  fi
+  FIELD_LABEL="$label" node -e '
+let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{
+  const item=JSON.parse(s);
+  const f=(item.fields||[]).find(x=>x.label===process.env.FIELD_LABEL);
+  if(!f?.value) process.exit(2);
+  process.stdout.write(String(f.value));
+});'
+}
+
+export_secrets_from_op() {
+  need_cmd op
+  ensure_runner_token
+
+  local zone_token account_id workers_token=""
+  # shellcheck disable=SC1090
+  [[ -f "$STATE_FILE" ]] && source "$STATE_FILE"
+  if [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+    account_id="$CLOUDFLARE_ACCOUNT_ID"
+  elif [[ -f /tmp/cf-secrets.env ]]; then
+    # shellcheck disable=SC1091
+    source /tmp/cf-secrets.env
+    account_id="${CLOUDFLARE_ACCOUNT_ID:-}"
+  fi
+  if [[ -z "${account_id:-}" ]]; then
+    zone_token="$(op_read_field Private "$OP_STREAM_ITEM_ID" credential 0)" || die "read Cloudflare account id from 1Password or set CLOUDFLARE_ACCOUNT_ID"
+    account_id="$(curl -fsS -H "Authorization: Bearer ${zone_token}" \
+      'https://api.cloudflare.com/client/v4/zones?per_page=1' \
+      | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const j=JSON.parse(s); const id=j.result?.[0]?.account?.id||""; if(!id) process.exit(2); process.stdout.write(id);})')"
+  fi
+
+  if workers_token="$(op item get "$OP_WORKERS_ITEM_TITLE" --account "$OP_ACCOUNT" --vault "Service Vault" --format json 2>/dev/null \
+    | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const item=JSON.parse(s); const f=(item.fields||[]).find(x=>x.label==="credential"||x.label==="api_token"||x.purpose==="PASSWORD"); if(!f?.value) process.exit(2); process.stdout.write(String(f.value));})' 2>/dev/null)"; then
+    :
+  else
+    workers_token=""
+  fi
+
+  umask 077
+  cat >"$STATE_FILE" <<EOF
+# Crabbox Cloudflare (managed by ~/bin/crabbox-cloudflare-setup)
+export CRABBOX_CLOUDFLARE_RUNNER_TOKEN=$(printf %q "$CRABBOX_CLOUDFLARE_RUNNER_TOKEN")
+export CLOUDFLARE_ACCOUNT_ID=$(printf %q "$account_id")
+EOF
+  if [[ -n "$workers_token" ]]; then
+    printf 'export CLOUDFLARE_API_TOKEN=%q\n' "$workers_token" >>"$STATE_FILE"
+  fi
+  chmod 600 "$STATE_FILE"
+
+  # shellcheck disable=SC1090
+  source "$STATE_FILE"
+  printf 'exported account_id_len:%s runner_token_len:%s workers_token:%s\n' \
+    "${#CLOUDFLARE_ACCOUNT_ID}" "${#CRABBOX_CLOUDFLARE_RUNNER_TOKEN}" \
+    "$([[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] && echo present || echo missing)"
+}
+
+write_runner_url() {
+  local url="$1"
+  if command -v yq >/dev/null 2>&1; then
+    yq -i ".cloudflare.apiUrl = \"$url\"" "$CONFIG_FILE"
+  elif rg -q '^cloudflare:' "$CONFIG_FILE"; then
+    if rg -q '^  apiUrl:' "$CONFIG_FILE"; then
+      sed -i '' "s#^  apiUrl:.*#  apiUrl: $url#" "$CONFIG_FILE"
+    else
+      sed -i '' "/^cloudflare:/a\\
+  apiUrl: $url
+" "$CONFIG_FILE"
+    fi
+  fi
+  if rg -q '^export CRABBOX_CLOUDFLARE_RUNNER_URL=' "$STATE_FILE" 2>/dev/null; then
+    sed -i '' "s#^export CRABBOX_CLOUDFLARE_RUNNER_URL=.*#export CRABBOX_CLOUDFLARE_RUNNER_URL=$(printf %q "$url")#" "$STATE_FILE"
+  else
+    {
+      printf '\n# Runner URL (updated %s)\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      printf 'export CRABBOX_CLOUDFLARE_RUNNER_URL=%q\n' "$url"
+    } >>"$STATE_FILE"
+  fi
+  export CRABBOX_CLOUDFLARE_RUNNER_URL="$url"
+}
+
+wrangler_env() {
+  # Prefer OAuth credentials over a zone-scoped API token when deploying Workers.
+  if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+    printf 'env -u CLOUDFLARE_API_TOKEN '
+  fi
+  printf 'env CLOUDFLARE_ACCOUNT_ID=%q ' "$CLOUDFLARE_ACCOUNT_ID"
+}
+
+wrangler_logged_in() {
+  env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID \
+    bash -c 'cd "$0" && npx wrangler whoami >/dev/null 2>&1' "$ROOT/worker"
+}
+
+login_wrangler() {
+  need_cmd op
+  ensure_repo
+  pkill -f "wrangler login" 2>/dev/null || true
+  sleep 1
+  : > /tmp/wrangler-login.log
+  (
+    cd "$ROOT/worker"
+    env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID \
+      npx wrangler login --browser=false
+  ) >>/tmp/wrangler-login.log 2>&1 &
+  local wrangler_pid=$!
+  sleep 4
+  local oauth_url
+  oauth_url="$(rg -o 'https://dash\.cloudflare\.com/oauth2/auth[^ ]+' /tmp/wrangler-login.log | head -1 || true)"
+  [[ -n "$oauth_url" ]] || die "could not parse wrangler OAuth URL; see /tmp/wrangler-login.log"
+  if command -v osascript >/dev/null 2>&1; then
+    osascript -e "tell application \"Google Chrome\" to activate" \
+      -e "tell application \"Google Chrome\" to open location \"$oauth_url\"" >/dev/null 2>&1 || true
+  fi
+  printf 'Approve Wrangler in Chrome (Allow), then wait up to 5 minutes...\n'
+  local i
+  for i in $(seq 1 150); do
+    if wrangler_logged_in; then
+      wait "$wrangler_pid" 2>/dev/null || true
+      printf 'wrangler OAuth login OK\n'
+      return 0
+    fi
+    if ! kill -0 "$wrangler_pid" 2>/dev/null; then
+      break
+    fi
+    sleep 2
+  done
+  wait "$wrangler_pid" 2>/dev/null || true
+  if wrangler_logged_in; then
+    printf 'wrangler OAuth login OK\n'
+    return 0
+  fi
+  die "wrangler OAuth login failed; see /tmp/wrangler-login.log"
+}
+
+deploy_runner() {
+  ensure_docker
+  ensure_repo
+  # shellcheck disable=SC1090
+  [[ -f "$STATE_FILE" ]] && source "$STATE_FILE"
+  [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]] || die "CLOUDFLARE_ACCOUNT_ID missing; run: crabbox-cloudflare-setup export-op"
+  [[ -n "${CRABBOX_CLOUDFLARE_RUNNER_TOKEN:-}" ]] || die "CRABBOX_CLOUDFLARE_RUNNER_TOKEN missing; run: crabbox-cloudflare-setup init"
+
+  if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]] && ! wrangler_logged_in; then
+    die "no Workers API token and wrangler is not logged in; run: crabbox-cloudflare-setup login"
+  fi
+
+  local url deploy_log
+  deploy_log="$(mktemp)"
+  (
+    cd "$ROOT/worker"
+    npm ci
+    npm run check
+    npm run build:cloudflare
+    # shellcheck disable=SC2046
+    $(wrangler_env) \
+      printf '%s' "$CRABBOX_CLOUDFLARE_RUNNER_TOKEN" \
+      | npx wrangler secret put CRABBOX_RUNNER_TOKEN --config wrangler.cloudflare.jsonc
+    # shellcheck disable=SC2046
+    $(wrangler_env) \
+      npx wrangler deploy --config wrangler.cloudflare.jsonc --containers-rollout=immediate 2>&1 | tee "$deploy_log"
+  )
+  url="$(sed -nE 's/.*(https:\/\/crabbox-cloudflare-container-runner[^[:space:]]*workers\.dev).*/\1/p' "$deploy_log" | tail -1)"
+  rm -f "$deploy_log"
+  [[ -n "$url" ]] || die "could not parse runner URL from wrangler deploy output"
+  write_runner_url "$url"
+}
+
+smoke() {
+  need_cmd crabbox
+  # shellcheck disable=SC1090
+  [[ -f "$STATE_FILE" ]] && source "$STATE_FILE"
+  [[ -n "${CRABBOX_CLOUDFLARE_RUNNER_URL:-}" ]] || die "runner URL missing; run deploy first"
+  [[ -n "${CRABBOX_CLOUDFLARE_RUNNER_TOKEN:-}" ]] || die "runner token missing"
+
+  export CRABBOX_CLOUDFLARE_RUNNER_URL CRABBOX_CLOUDFLARE_RUNNER_TOKEN
+  crabbox doctor --provider cloudflare
+  crabbox run --provider cloudflare --type lite --no-sync --timing-json --shell -- \
+    'echo CRABBOX_CF_OK; uname -a; command -v go node pnpm gh rg'
+}
+
+usage() {
+  cat <<'EOF'
+Usage: crabbox-cloudflare-setup <command>
+
+Commands:
+  init        Create user config, runner token, and ~/.secrets hook
+  export-op   Read Cloudflare account id (and optional Workers token) from 1Password
+  login       Wrangler OAuth login (opens Chrome; needs one Allow click)
+  deploy      Deploy the Cloudflare Worker + container runner
+  smoke       Run a no-sync Cloudflare smoke command
+  all         init + export-op + login + deploy + smoke
+
+Environment:
+  CLOUDFLARE_ACCOUNT_ID          Optional override (otherwise from 1Password zones API)
+  CLOUDFLARE_API_TOKEN           Optional Workers token (otherwise wrangler OAuth)
+  CRABBOX_REPO                   Crabbox source checkout (default: ~/sandbox/oss/crabbox)
+  OP_WORKERS_ITEM_TITLE          1Password item with Workers API token (default: Cloudflare Workers API Token)
+
+Prerequisites:
+  - Cloudflare Workers Paid + Durable Objects + Containers
+  - Docker (Docker Desktop or: colima start)
+  - brew install openclaw/tap/crabbox
+  - 1Password: Private item "Cloudflare Stream Api Token" (for account id lookup)
+EOF
+}
+
+main() {
+  need_cmd crabbox
+  need_cmd openssl
+  need_cmd curl
+  need_cmd op
+
+  case "${1:-init}" in
+    init)
+      ensure_config
+      ensure_runner_token
+      ensure_secrets_hook
+      printf 'user config: %s\n' "$CONFIG_FILE"
+      printf 'secrets: %s\n' "$STATE_FILE"
+      ;;
+    export-op)
+      ensure_config
+      ensure_runner_token
+      ensure_secrets_hook
+      export_secrets_from_op
+      ;;
+    login)
+      login_wrangler
+      ;;
+    deploy)
+      ensure_config
+      ensure_runner_token
+      deploy_runner
+      printf 'deploy complete; runner URL in %s\n' "$CONFIG_FILE"
+      ;;
+    smoke)
+      smoke
+      ;;
+    all)
+      ensure_config
+      ensure_runner_token
+      ensure_secrets_hook
+      export_secrets_from_op
+      login_wrangler
+      deploy_runner
+      smoke
+      ;;
+    -h|--help|help)
+      usage
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"
