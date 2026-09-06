@@ -75,9 +75,9 @@ ensure_docker() {
     return 0
   fi
   if command -v colima >/dev/null 2>&1; then
+    # `colima status` exits 1 for a merely stopped instance; never delete here,
+    # `colima start` resumes an existing instance in place. Rebuild manually.
     if ! colima status >/dev/null 2>&1; then
-      colima stop >/dev/null 2>&1 || true
-      colima delete -f >/dev/null 2>&1 || true
       colima start --cpu 4 --memory 8
     fi
     docker context use colima >/dev/null 2>&1 || true
@@ -115,10 +115,6 @@ export_secrets_from_op() {
   [[ -f "$STATE_FILE" ]] && source "$STATE_FILE"
   if [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
     account_id="$CLOUDFLARE_ACCOUNT_ID"
-  elif [[ -f /tmp/cf-secrets.env ]]; then
-    # shellcheck disable=SC1091
-    source /tmp/cf-secrets.env
-    account_id="${CLOUDFLARE_ACCOUNT_ID:-}"
   fi
   if [[ -z "${account_id:-}" ]]; then
     zone_token="$(op_read_field Private "$OP_STREAM_ITEM_ID" credential 0)" || die "read Cloudflare account id from 1Password or set CLOUDFLARE_ACCOUNT_ID"
